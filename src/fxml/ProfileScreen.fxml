@@ -1,14 +1,113 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.lang.*?>
-<?import java.util.*?>
-<?import javafx.scene.*?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.Accordion?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.TitledPane?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.VBox?>
 
-<AnchorPane xmlns="http://javafx.com/javafx"
-            xmlns:fx="http://javafx.com/fxml"
-            fx:controller="$CONTROLLER_NAME$"
-            prefHeight="400.0" prefWidth="600.0" >
-
-</AnchorPane>
+<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="527.0" prefWidth="804.0" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.ProfileScreenController">
+   <center>
+      <VBox prefHeight="200.0" prefWidth="100.0" BorderPane.alignment="CENTER">
+         <children>
+            <AnchorPane prefHeight="83.0" prefWidth="804.0" />
+            <FlowPane prefHeight="441.0" prefWidth="804.0">
+               <children>
+                  <TabPane prefHeight="416.0" prefWidth="642.0" tabClosingPolicy="UNAVAILABLE">
+                     <tabs>
+                        <Tab text="Encrypt">
+                           <content>
+                              <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="337.0" prefWidth="583.0" style="-fx-border-color: black;">
+                                 <children>
+                                    <MenuBar layoutY="1.0" prefHeight="25.0" prefWidth="642.0">
+                                      <menus>
+                                        <Menu mnemonicParsing="false" text="File">
+                                          <items>
+                                                <Menu mnemonicParsing="false" text="Open">
+                                                  <items>
+                                                    <MenuItem fx:id="fileMenuItem" mnemonicParsing="false" text="File" />
+                                                      <MenuItem fx:id="folderMenuItem" mnemonicParsing="false" text="Folder" />
+                                                  </items>
+                                                </Menu>
+                                              <Menu mnemonicParsing="false" text="Algorithm">
+                                                <items>
+                                                  <MenuItem fx:id="aesAlgoMenuItem" mnemonicParsing="false" text="AES" />
+                                                      <MenuItem fx:id="desAlgoMenuItem" mnemonicParsing="false" text="DES" />
+                                                      <MenuItem fx:id="rsaAlgoMenuItem" mnemonicParsing="false" text="RSA" />
+                                                </items>
+                                              </Menu>
+                                                <MenuItem fx:id="refreshMenuItem" mnemonicParsing="false" text="Refresh..." />
+                                          </items>
+                                        </Menu>
+                                        <Menu mnemonicParsing="false" text="Help">
+                                          <items>
+                                            <MenuItem mnemonicParsing="false" text="About" />
+                                          </items>
+                                        </Menu>
+                                      </menus>
+                                    </MenuBar>
+                                    <Label fx:id="algoLabel" layoutX="318.0" layoutY="116.0" prefHeight="43.0" prefWidth="250.0" text="Label" />
+                                    <Label fx:id="fileLabel" layoutX="318.0" layoutY="159.0" prefHeight="43.0" prefWidth="250.0" text="Label" />
+                                    <Button fx:id="encryptButton" layoutX="318.0" layoutY="202.0" mnemonicParsing="false" text="Encrypt" />
+                                 </children>
+                              </AnchorPane>
+                           </content>
+                        </Tab>
+                        <Tab text="Decrypt">
+                           <content>
+                              <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="423.0" prefWidth="583.0">
+                                 <children>
+                                    <TextField layoutX="26.0" layoutY="14.0" prefHeight="27.0" prefWidth="503.0" />
+                                    <ScrollPane layoutX="26.0" layoutY="56.0" prefHeight="317.0" prefWidth="590.0">
+                                       <content>
+                                          <FlowPane maxWidth="586.0" prefHeight="280.0" prefWidth="586.0" />
+                                       </content>
+                                    </ScrollPane>
+                                    <Button layoutX="539.0" layoutY="15.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="77.0" text="Button" />
+                                 </children>
+                              </AnchorPane>
+                           </content>
+                        </Tab>
+                        <Tab text="About">
+                          <content>
+                            <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+                          </content>
+                        </Tab>
+                     </tabs>
+                  </TabPane>
+                  <VBox prefHeight="416.0" prefWidth="162.0">
+                     <children>
+                        <Label prefHeight="17.0" prefWidth="169.0" text="History" />
+                        <Accordion prefHeight="426.0" prefWidth="162.0">
+                          <panes>
+                            <TitledPane animated="false" text="Encrypted">
+                              <content>
+                                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+                              </content>
+                            </TitledPane>
+                            <TitledPane animated="false" text="Decrypted">
+                              <content>
+                                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+                              </content>
+                            </TitledPane>
+                          </panes>
+                        </Accordion>
+                     </children>
+                  </VBox>
+               </children>
+            </FlowPane>
+            <AnchorPane prefHeight="79.0" prefWidth="804.0" />
+         </children>
+      </VBox>
+   </center>
+</BorderPane>
