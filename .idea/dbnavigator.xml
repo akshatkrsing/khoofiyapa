@@ -29,7 +29,7 @@
   </component>
   <component name="DBNavigator.Project.DatabaseConsoleManager">
     <connection id="eab9c777-dcb3-4daf-a01c-e6473a8b7118">
-      <console name="ngdb" type="STANDARD" schema="mysql" session="Main" />
+      <console name="ngdb" type="STANDARD" schema="" session="Main" />
     </connection>
   </component>
   <component name="DBNavigator.Project.DatabaseFileManager">
