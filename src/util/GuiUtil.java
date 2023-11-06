@@ -1,5 +1,4 @@
 package util;
-
 import javafx.scene.control.Alert;
 
 public class GuiUtil {

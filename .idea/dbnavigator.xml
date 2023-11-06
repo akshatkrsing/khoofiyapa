@@ -32,6 +32,9 @@
       <console name="ngdb" type="STANDARD" schema="" session="Main" />
     </connection>
   </component>
+  <component name="DBNavigator.Project.DatabaseEditorStateManager">
+    <last-used-providers />
+  </component>
   <component name="DBNavigator.Project.DatabaseFileManager">
     <open-files />
   </component>
@@ -81,6 +84,8 @@
           <host value="localhost" />
           <port value="3306" />
           <database value="mysql" />
+          <tns-folder value="" />
+          <tns-profile value="" />
           <type value="USER_PASSWORD" />
           <user value="root" />
           <deprecated-pwd value="WFpNZUUyTTN2LUpubzlQ" />
