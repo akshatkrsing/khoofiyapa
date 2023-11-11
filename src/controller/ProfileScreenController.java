@@ -24,6 +24,7 @@ import javax.crypto.CipherOutputStream;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 import javax.swing.*;
 import javax.swing.filechooser.FileSystemView;
 import java.awt.*;
@@ -32,8 +33,9 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.URL;
-import java.security.SecureRandom;
+import java.security.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -45,32 +47,32 @@ public class ProfileScreenController implements Initializable {
 
     }
     @FXML
-    MenuItem fileMenuItem;
+    private MenuItem fileMenuItem;
     @FXML
-    MenuItem folderMenuItem;
+    private MenuItem folderMenuItem;
     @FXML
-    MenuItem refreshMenuItem;
+    private MenuItem refreshMenuItem;
     @FXML
     MenuItem aesAlgoMenuItem;
     @FXML
-    MenuItem desAlgoMenuItem;
+    private MenuItem desAlgoMenuItem;
     @FXML
-    MenuItem rsaAlgoMenuItem;
+    private MenuItem rsaAlgoMenuItem;
     @FXML
-    Label algoLabel;
+    private Label algoLabel;
     @FXML
-    Label fileLabel;
+    private Label fileLabel;
     @FXML
-    Button encryptButton;
+    private Button encryptButton;
     @FXML
-    PasswordField privateKeyField;
+    private PasswordField privateKeyField;
     @FXML
-    PasswordField confirmPrivateKeyField;
+    private PasswordField confirmPrivateKeyField;
     @FXML
-    CheckMenuItem customCheckMenuItem;
+    private CheckMenuItem customCheckMenuItem;
     @FXML
-    CheckMenuItem generatedCheckMenuItem;
-
+    private CheckMenuItem generatedCheckMenuItem;
+    private String rootFolderPath;
     public void first(){
         searchField.setPromptText("Enter search term");
 
@@ -86,20 +88,23 @@ public class ProfileScreenController implements Initializable {
 
 
         File browsedFile;
-    public void browseFile(){
-        FileChooser fileChooser = new FileChooser();
-        browsedFile = fileChooser.showOpenDialog(null);
+    public File browseFile(){
+        FileChooser encryptedFileChooser = new FileChooser();
+        encryptedFileChooser.setInitialDirectory(new File("C:\\"));
+        File encryptedFile = encryptedFileChooser.showSaveDialog(null);
+        try {
+            encryptedFile.createNewFile();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return encryptedFile;
     }
-    public void browseFolder(){
-
-    }
-    public void encryptFile(){
+    public void encryptFileUsingAES(){
         try {
             // Generate a random AES key
             assert browsedFile != null;
-            FileChooser encryptedFileChooser = new FileChooser();
-            File encryptedFile = encryptedFileChooser.showSaveDialog(null);
-            encryptedFile.createNewFile();
+            File encryptedFile = browseFile();
+
             KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
             keyGenerator.init(256, new SecureRandom());
             SecretKey secretKey = keyGenerator.generateKey();
@@ -108,11 +113,10 @@ public class ProfileScreenController implements Initializable {
             byte[] iv = new byte[16];
             SecureRandom random = new SecureRandom();
             random.nextBytes(iv);
-            IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
 
             // Initialize the AES cipher for encryption
             Cipher encryptCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-            encryptCipher.init(Cipher.ENCRYPT_MODE, secretKey, ivParameterSpec);
+            encryptCipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(iv));
 
             FileInputStream inputStream = new FileInputStream(browsedFile);
             FileOutputStream outputStream = new FileOutputStream(encryptedFile);
@@ -138,6 +142,93 @@ public class ProfileScreenController implements Initializable {
             e.printStackTrace();
         }
     }
+    public void encryptFileUsingTripleDES(){
+        try {
+            assert browsedFile != null;
+            File encryptedFile = browseFile();
+
+            // Generate a random 192-bit (24-byte) secret key
+            SecureRandom random = new SecureRandom();
+            byte[] keyData = new byte[24];
+            random.nextBytes(keyData);
+            SecretKey key = new SecretKeySpec(keyData, "DESede");
+
+            // Generate an initialization vector (IV)
+            byte[] iv = new byte[8];
+            random.nextBytes(iv);
+
+            // Initialize the cipher with the key and IV in encryption mode
+            Cipher cipher = Cipher.getInstance("DESede/CBC/PKCS5Padding");
+            cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(iv));
+
+            // Create input and output streams
+            FileInputStream inputStream = new FileInputStream(browsedFile);
+            FileOutputStream outputStream = new FileOutputStream(encryptedFile);
+
+            // Write the IV to the output file
+            outputStream.write(iv);
+
+            // Create a buffer for data encryption
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                byte[] encryptedBytes = cipher.update(buffer, 0, bytesRead);
+                outputStream.write(encryptedBytes);
+            }
+
+            byte[] finalEncryptedBytes = cipher.doFinal();
+            outputStream.write(finalEncryptedBytes);
+
+            inputStream.close();
+            outputStream.close();
+
+            System.out.println("File encrypted successfully.");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    public void encryptFileUsingRSA(){
+        try {
+            assert browsedFile != null;
+            File encryptedFile = browseFile();
+            // Generate RSA key pair (public and private key)
+            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+            keyPairGenerator.initialize(2048); // Key size
+            KeyPair keyPair = keyPairGenerator.generateKeyPair();
+
+            PublicKey publicKey = keyPair.getPublic();
+            PrivateKey privateKey = keyPair.getPrivate();
+
+            Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+            cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+
+            FileInputStream inputStream = new FileInputStream(browsedFile);
+            FileOutputStream outputStream = new FileOutputStream(encryptedFile);
+            CipherOutputStream cipherOutputStream = new CipherOutputStream(outputStream, cipher);
+
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                cipherOutputStream.write(buffer, 0, bytesRead);
+            }
+
+            cipherOutputStream.close();
+            inputStream.close();
+            outputStream.close();
+
+            System.out.println("File encrypted successfully.");
+        } catch (Exception e) {
+            //
+            e.printStackTrace();
+        }
+    }
+    public void browseFolder(){
+
+    }
+    public void encryptFolder(){
+
+    }
+
     @FXML
     private TextField searchField;
 

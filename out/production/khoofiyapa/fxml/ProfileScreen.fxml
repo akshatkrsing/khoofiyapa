@@ -79,12 +79,12 @@
                         </Tab>
                         <Tab text="Decrypt">
                            <content>
-                              <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="273.0" prefWidth="642.0">
+                              <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="423.0" prefWidth="583.0">
                                  <children>
                                     <TextField fx:id="searchField" layoutX="26.0" layoutY="14.0" prefHeight="27.0" prefWidth="503.0" />
-                                    <ScrollPane layoutX="26.0" layoutY="56.0" prefHeight="175.0" prefWidth="590.0">
+                                    <ScrollPane layoutX="26.0" layoutY="56.0" prefHeight="317.0" prefWidth="590.0">
                                        <content>
-                                          <FlowPane fx:id="searchResultFlowPane" maxWidth="586.0" prefHeight="164.0" prefWidth="586.0" />
+                                          <FlowPane fx:id="searchResultFlowPane" maxWidth="586.0" prefHeight="280.0" prefWidth="586.0" />
                                        </content>
                                     </ScrollPane>
                                     <Button layoutX="539.0" layoutY="15.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="77.0" text="Button" />
