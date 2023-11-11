@@ -238,7 +238,7 @@ public class ProfileScreenController implements Initializable {
 //    @FXML
 //    private Button searchButton;
 
-    private String searchDirectory = ""; // Change to the directory you want to search
+    private String searchDirectory = "D:\\"; // Change to the directory you want to search
 
     private Timeline searchDelay = new Timeline();
 
