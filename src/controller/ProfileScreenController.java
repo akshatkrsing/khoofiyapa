@@ -6,23 +6,21 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.embed.swing.SwingFXUtils;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
-import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.FlowPane;
-import javafx.stage.DirectoryChooser;
+import javafx.scene.layout.Region;
 import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 import javafx.util.Duration;
 import main.Main;
 import table.ParamsTable;
@@ -34,11 +32,6 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-import javax.swing.*;
-import javax.swing.filechooser.FileSystemView;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -51,6 +44,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.ResourceBundle;
 
 public class ProfileScreenController implements Initializable {
@@ -85,64 +79,69 @@ public class ProfileScreenController implements Initializable {
     private CheckMenuItem customCheckMenuItem;
     @FXML
     private CheckMenuItem generatedCheckMenuItem;
-    private String rootFolderPath;
+    String rootFolderPath;
     private BooleanProperty listViewVisible;
     private Connection connection;
-    @FXML
-    private Button rootFolderBrowseButton;
-    @FXML
-    private TextField rootFolderPathField;
-    @FXML
-    private Button applyRootFolderPathButton;
-    @FXML
-    private Button confirmRootFolderPathButton;
     public void first(){
         searchField.setPromptText("Enter search term");
         connection = Main.getConnection();
         try {
-            PreparedStatement preparedStatement = connection.prepareStatement(ParamsTable.QUERY_FETCH_ROOT_FOLDER_PATH);
+            PreparedStatement preparedStatement = connection.prepareStatement(ParamsTable.QUERY_FETCH_PARAM_VALUE);
             preparedStatement.setString(1,"rootFolderPath");
             ResultSet resultSet = preparedStatement.executeQuery();
             resultSet.next();
             rootFolderPath = resultSet.getString(ParamsTable.COLUMN_PARAM_VALUE);
         } catch (SQLException e) {
-
             e.printStackTrace();
         }
         if(rootFolderPath == null){
             // Documents directory as default
             rootFolderPath = System.getProperty("user.home") + "\\Documents";
             System.out.println("Document Directory: " + rootFolderPath);
-            FXMLLoader fxmlLoader=new FXMLLoader(getClass().getResource("../fxml/setPathDialogFXML.fxml"));
+            FXMLLoader fxmlLoader=new FXMLLoader(getClass().getResource("../fxml/setRootPathDialogFXML.fxml"));
             // open dialog
-
-            applyRootFolderPathButton.setDisable(true);
-            rootFolderPathField.setText(rootFolderPath);
-            DirectoryChooser directoryChooser = new DirectoryChooser();
-            rootFolderBrowseButton.setOnAction(event -> {
-                File selectedDirectory = directoryChooser.showDialog(null);
-                if (selectedDirectory != null) {
-                    System.out.println("Selected Folder: " + selectedDirectory.getAbsolutePath());
-                    rootFolderPathField.setText(selectedDirectory.getAbsolutePath());
-                    // Handle the selected folder as needed
-                } else {
-                    //
-                    System.out.println("No folder selected");
-                }
-                if(rootFolderPathField.getText() != rootFolderPath) applyRootFolderPathButton.setDisable(false);
-            });
-            applyRootFolderPathButton.setOnAction(event -> {
+            Dialog<ButtonType> dialog = new Dialog<>();
+            dialog.setTitle("Custom Dialog");
+            Stage dialogStage = (Stage) encryptButton.getScene().getWindow();
+            dialog.initOwner(dialogStage);
+            Region content = null;
+            try {
+                content = fxmlLoader.load();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            dialog.getDialogPane().getButtonTypes().addAll(ButtonType.APPLY,ButtonType.OK,ButtonType.CANCEL);
+            dialog.getDialogPane().setContent(content);
+            SetRootPathDialogController setRootPathDialogController = fxmlLoader.getController();
+            setRootPathDialogController.first();
+            setRootPathDialogController.rootFolderPathField.setText(rootFolderPath);
+            ButtonType applyButtonType = dialog.getDialogPane().getButtonTypes().stream()
+                    .filter(buttonType -> buttonType.getButtonData() == ButtonType.APPLY.getButtonData())
+                    .findFirst()
+                    .orElse(null);
+            if (applyButtonType != null) {
+                dialog.getDialogPane().lookupButton(applyButtonType).setDisable(true);
+            }
+            dialog.getDialogPane().lookupButton(applyButtonType).addEventFilter(javafx.event.ActionEvent.ACTION, event -> {
+                System.out.println("Apply button clicked");
                 // check if folder exists
 
-                rootFolderPath = rootFolderPathField.getText();
-                applyRootFolderPathButton.setDisable(true);
-            });
-            confirmRootFolderPathButton.setOnAction(event -> {
-                // create root folder
+                // Perform actions or validations here
+                rootFolderPath = setRootPathDialogController.rootFolderPathField.getText();
+                if (applyButtonType != null) {
+                    dialog.getDialogPane().lookupButton(applyButtonType).setDisable(true);
+                }
+                //update param in db
 
-                // close dialog
-
+                event.consume(); // Consume the event to prevent the dialog from closing
             });
+
+            // Show the dialog and wait for a response
+            Optional<ButtonType> result = dialog.showAndWait();
+            // update param in db if not updated yet
+
+            // create folder
+
         }
         // Set up a short delay to trigger search after typing
         searchDelay.getKeyFrames().add(new KeyFrame(Duration.millis(500), event -> performSearch()));
