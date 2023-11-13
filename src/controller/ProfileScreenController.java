@@ -1,5 +1,6 @@
 package controller;
 
+import entity.FileWrapper;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.property.BooleanProperty;
@@ -19,6 +20,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Region;
+import javafx.scene.transform.Scale;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -37,6 +39,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.security.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -168,6 +171,12 @@ public class ProfileScreenController implements Initializable {
                 //
             }
         });
+        Scale zScale = new Scale();
+        zScale.setZ(0.9); // Set the Z-axis scale factor (adjust as needed)
+
+        // Apply the Z-axis scale to the ListView
+        searchResultListView.getTransforms().add(zScale);
+        rootFolderTreeView.setRoot(createFileTreeItem(new File(rootFolderPath)));
     }
     public void refresh(){
 
@@ -320,8 +329,8 @@ public class ProfileScreenController implements Initializable {
     @FXML
     private TextField searchField;
 
-    @FXML
-    private FlowPane searchResultFlowPane;
+//    @FXML
+//    private FlowPane searchResultFlowPane;
     @FXML
     private ListView searchResultListView;
 
@@ -345,7 +354,7 @@ public class ProfileScreenController implements Initializable {
     @FXML
     private void performSearch() {
         String searchTerm = searchField.getText();
-        searchResultFlowPane.getChildren().clear();
+//        searchResultFlowPane.getChildren().clear();
         if (searchTerm.length() > 0) {
             List<String> foundFiles = searchFiles(searchDirectory, searchTerm);
 //            for(File file : foundFiles){
@@ -375,7 +384,7 @@ public class ProfileScreenController implements Initializable {
             ObservableList<String> observableList = FXCollections.observableArrayList(foundFiles);
             searchResultListView.setItems(observableList);
         } else {
-           //
+           searchResultListView.getItems().clear();
         }
     }
 
@@ -391,18 +400,33 @@ public class ProfileScreenController implements Initializable {
 
         if (files != null) {
             for (File file : files) {
+                if (file.getName().toLowerCase().contains(searchQuery.toLowerCase())) {
+                    foundFiles.add(file.getAbsolutePath());
+                }
                 if (file.isDirectory()) {
                     foundFiles.addAll(searchFiles(file.getAbsolutePath(), searchQuery));
-                } else {
-                    if (file.getName().toLowerCase().contains(searchQuery.toLowerCase())) {
-                        foundFiles.add(file.getAbsolutePath());
-                    }
                 }
             }
         }
         return foundFiles;
     }
-
+//    @FXML
+//    private ScrollPane treeViewScrollPane;
+    @FXML
+    private TreeView rootFolderTreeView;
+    private TreeItem<String> createFileTreeItem(File file){
+        TreeItem<String> fileTreeItem = new TreeItem<>(file.getAbsolutePath());
+        if (file.isDirectory()) {
+            // If it's a directory, recursively add its children
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    fileTreeItem.getChildren().add(createFileTreeItem(child));
+                }
+            }
+        }
+        return fileTreeItem;
+    }
 //    private void displaySearchResults(List<File> foundFiles) {
 //        resultTextArea.clear();
 //
