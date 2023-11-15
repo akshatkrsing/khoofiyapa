@@ -1,12 +1,15 @@
 package controller;
 
+import com.sun.source.tree.Tree;
 import entity.FileWrapper;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
@@ -18,6 +21,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Region;
 import javafx.scene.transform.Scale;
@@ -34,10 +38,13 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.awt.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.security.*;
@@ -151,11 +158,12 @@ public class ProfileScreenController implements Initializable {
         searchDelay.setCycleCount(1);
 
         searchField.setOnKeyTyped(this::handleKeyTyped);
-        listViewVisible = new SimpleBooleanProperty(true);
+        listViewVisible = new SimpleBooleanProperty(false);
         searchResultListView.visibleProperty().bind(listViewVisible);
         listViewToggleButton.setOnAction(event -> {
             listViewVisible.set(!listViewVisible.get());
         });
+//        listViewToggleButton.setDisable(true);
         searchResultListView.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.DOWN  && searchResultListView.getSelectionModel().getSelectedItem() != null) {
                 searchField.setText(searchResultListView.getSelectionModel().getSelectedItem().toString());
@@ -171,12 +179,30 @@ public class ProfileScreenController implements Initializable {
                 //
             }
         });
-        Scale zScale = new Scale();
-        zScale.setZ(0.9); // Set the Z-axis scale factor (adjust as needed)
+        // use file wrapper
+        Task<Void> rootTreeViewTask = setRootTreeViewTask();
+        treeViewProgress.progressProperty().bind(rootTreeViewTask.progressProperty());
 
-        // Apply the Z-axis scale to the ListView
-        searchResultListView.getTransforms().add(zScale);
-        rootFolderTreeView.setRoot(createFileTreeItem(new File(rootFolderPath)));
+        // When the task is complete, unbind the progress bar and reset its value
+        rootTreeViewTask.setOnSucceeded(event -> {
+            treeViewProgress.progressProperty().unbind();
+            treeViewProgress.setProgress(0.0);
+            treeViewProgress.setVisible(false);
+        });
+        new Thread(rootTreeViewTask).start();
+    }
+    @FXML
+    private ProgressIndicator treeViewProgress;
+    private Task<Void> setRootTreeViewTask(){
+        return new Task<>(){
+            @Override
+            protected Void call() throws Exception {
+                TreeItem<FileWrapper> rootItem = createFileTreeItem(new File(rootFolderPath));
+                rootItem.setExpanded(true);
+                Platform.runLater(() -> rootFolderTreeView.setRoot(rootItem));
+                return null;
+            }
+        };
     }
     public void refresh(){
 
@@ -189,7 +215,7 @@ public class ProfileScreenController implements Initializable {
         encryptedFileChooser.setInitialDirectory(new File(rootFolderPath));
         File encryptedFile = encryptedFileChooser.showSaveDialog(null);
         try {
-            encryptedFile.createNewFile();
+            if(!encryptedFile.exists()) encryptedFile.createNewFile();
         } catch (IOException e) {
 
             e.printStackTrace();
@@ -319,6 +345,27 @@ public class ProfileScreenController implements Initializable {
             e.printStackTrace();
         }
     }
+    public void encryptFile(){
+        String algo = algoLabel.getText();
+        if(algo.equals("AES")){
+            encryptFileUsingAES();
+        }
+        else if(algo.equals("3DES")){
+
+        }
+        else if(algo.equals("RSA")){
+
+        }
+        else{
+            GuiUtil.alert(Alert.AlertType.ERROR,"Algorithm does not exist!");
+        }
+    }
+    public void forAES(){
+        algoLabel.setText("AES");
+    }
+    public void setAlgorithmMenuItems(){
+
+    }
     public void browseFolder(){
 
     }
@@ -382,9 +429,17 @@ public class ProfileScreenController implements Initializable {
 //            }
 //            displaySearchResults(foundFiles);
             ObservableList<String> observableList = FXCollections.observableArrayList(foundFiles);
-            searchResultListView.setItems(observableList);
+            if(observableList.size()>0){
+//                listViewToggleButton.setDisable(false);
+                searchResultListView.setItems(observableList);
+            }
+            else {
+//                listViewToggleButton.setDisable(true);
+                searchResultListView.getItems().clear();
+            }
         } else {
-           searchResultListView.getItems().clear();
+//            listViewToggleButton.setDisable(true);
+            searchResultListView.getItems().clear();
         }
     }
 
@@ -414,8 +469,8 @@ public class ProfileScreenController implements Initializable {
 //    private ScrollPane treeViewScrollPane;
     @FXML
     private TreeView rootFolderTreeView;
-    private TreeItem<String> createFileTreeItem(File file){
-        TreeItem<String> fileTreeItem = new TreeItem<>(file.getAbsolutePath());
+    private TreeItem<FileWrapper> createFileTreeItem(File file){
+        TreeItem<FileWrapper> fileTreeItem = new TreeItem<>(new FileWrapper(file.getName(),file.getAbsolutePath()));
         if (file.isDirectory()) {
             // If it's a directory, recursively add its children
             File[] children = file.listFiles();
@@ -438,4 +493,41 @@ public class ProfileScreenController implements Initializable {
 //            }
 //        }
 //    }
+    @FXML
+    private Button shareDecryptedFileButton;
+    @FXML
+    private Button shareViaWhatsappButton;
+    @FXML
+    private Button shareViaMailButton;
+    @FXML
+    private AnchorPane shareOptionAnchorPane;
+    private File selectedFile;
+
+    public void shareViaWhatsapp(){
+        try {
+            assert selectedFile != null;
+            // Construct the WhatsApp URL with the file path
+            String whatsappUrl = "https://api.whatsapp.com/send?text=&phone=&file=" + selectedFile.toURI().toURL();
+
+            // Open the default browser with the WhatsApp URL
+            Desktop.getDesktop().browse(new URI(whatsappUrl));
+        } catch(URISyntaxException e){
+
+        } 
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public void shareViaMail(){
+        try{
+            assert selectedFile != null;
+            Desktop.getDesktop().mail(selectedFile.toURI());
+        }
+        catch (AssertionError | IOException e){
+
+        }
+    }
+    public void toggleShareOptionAnchorPane(){
+        shareOptionAnchorPane.setVisible(!shareOptionAnchorPane.isVisible());
+    }
 }

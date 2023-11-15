@@ -9,6 +9,7 @@
 <?import javafx.scene.control.MenuBar?>
 <?import javafx.scene.control.MenuItem?>
 <?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.ProgressIndicator?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TextField?>
@@ -86,6 +87,7 @@
                                     <Button fx:id="listViewToggleButton" layoutX="539.0" layoutY="15.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="77.0" text="Toggle" />
                                     <TreeView fx:id="rootFolderTreeView" layoutX="26.0" layoutY="40.0" prefHeight="200.0" prefWidth="503.0" />
                                     <ListView fx:id="searchResultListView" layoutX="26.0" layoutY="40.0" prefHeight="83.0" prefWidth="503.0" />
+                                    <ProgressIndicator fx:id="treeViewProgress" layoutX="264.0" layoutY="103.0" progress="0.0" />
                                  </children>
                               </AnchorPane>
                            </content>

@@ -3,11 +3,11 @@ package entity;
 import java.io.File;
 
 public class FileWrapper {
-    String fileName;
-    String filePath;
-    public FileWrapper(File file){
-        this.fileName = file.getName();
-        this.filePath = file.getAbsolutePath();
+    private String fileName;
+    private String filePath;
+    public FileWrapper(String fileName, String filePath){
+        this.fileName = fileName;
+        this.filePath = filePath;
     }
 
     public String getFileName() {
@@ -16,5 +16,9 @@ public class FileWrapper {
 
     public String getFilePath() {
         return filePath;
+    }
+    @Override
+    public String toString(){
+        return getFileName();
     }
 }
