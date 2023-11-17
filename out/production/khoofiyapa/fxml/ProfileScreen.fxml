@@ -88,7 +88,11 @@
                                     <TreeView fx:id="rootFolderTreeView" layoutX="26.0" layoutY="40.0" prefHeight="200.0" prefWidth="503.0" />
                                     <ListView fx:id="searchResultListView" layoutX="26.0" layoutY="40.0" prefHeight="83.0" prefWidth="503.0" />
                                     <ProgressIndicator fx:id="treeViewProgress" layoutX="264.0" layoutY="103.0" progress="0.0" />
+<<<<<<< HEAD
                                     <Button layoutX="128.0" layoutY="278.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="299.0" text="Share" />
+=======
+                                    <Button fx:id="shareDecryptedFileButton" layoutX="128.0" layoutY="278.0" mnemonicParsing="false" onAction="#toggleShareOptionAnchorPane" prefHeight="25.0" prefWidth="299.0" text="Share" />
+>>>>>>> a5fef87543b97549d2e3077fddd4f873e2133395
                                     <AnchorPane fx:id="shareOptionAnchorPane" layoutX="128.0" layoutY="302.0" prefHeight="89.0" prefWidth="299.0">
                                        <children>
                                           <Button fx:id="shareViaWhatsappButton" layoutX="41.0" layoutY="20.0" mnemonicParsing="false" onAction="#shareViaWhatsapp" prefHeight="37.0" prefWidth="83.0" text="Whatsapp" />

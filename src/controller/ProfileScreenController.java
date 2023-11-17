@@ -511,7 +511,7 @@ public class ProfileScreenController implements Initializable {
             Desktop.getDesktop().browse(new URI(whatsappUrl));
         } catch(URISyntaxException e){
 
-        } 
+        }
         catch (IOException e) {
             e.printStackTrace();
         }
