@@ -36,8 +36,10 @@ public class Main extends Application {
         try {
             primaryStage.setScene(new Scene(fxmlLoader.load()));
         } catch (IOException e) {
+            System.out.println("Exception in Main while loading FXML!");
             e.printStackTrace();
         }
+        primaryStage.setResizable(false);
         primaryStage.show();
         ProfileScreenController profileScreenController = fxmlLoader.getController();
         profileScreenController.first();

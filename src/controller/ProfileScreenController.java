@@ -1,6 +1,5 @@
 package controller;
 
-import com.sun.source.tree.Tree;
 import entity.FileWrapper;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -19,17 +18,18 @@ import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Region;
-import javafx.scene.transform.Scale;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import main.Main;
 import table.ParamsTable;
+import util.FileIconUtil;
 import util.GuiUtil;
 
 import javax.crypto.Cipher;
@@ -39,23 +39,17 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.awt.*;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.file.Files;
 import java.security.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
-import java.util.Optional;
-import java.util.ResourceBundle;
 
 public class ProfileScreenController implements Initializable {
 
@@ -66,7 +60,7 @@ public class ProfileScreenController implements Initializable {
     @FXML
     private MenuItem fileMenuItem;
     @FXML
-    private MenuItem folderMenuItem;
+    private MenuItem encryptionSettingMenuItem;
     @FXML
     private MenuItem refreshMenuItem;
     @FXML
@@ -78,7 +72,7 @@ public class ProfileScreenController implements Initializable {
     @FXML
     private Label algoLabel;
     @FXML
-    private Label fileLabel;
+    private Label folderPathLabel;
     @FXML
     private Button encryptButton;
     @FXML
@@ -118,6 +112,7 @@ public class ProfileScreenController implements Initializable {
             try {
                 content = fxmlLoader.load();
             } catch (IOException e) {
+                System.out.println("Exception in ProfileScreenController while loading dialog region!");
                 e.printStackTrace();
             }
             dialog.getDialogPane().getButtonTypes().addAll(ButtonType.APPLY,ButtonType.OK,ButtonType.CANCEL);
@@ -190,16 +185,38 @@ public class ProfileScreenController implements Initializable {
             treeViewProgress.setVisible(false);
         });
         new Thread(rootTreeViewTask).start();
+        //
+        // Add a selection listener to the TreeView
+        rootFolderTreeView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            // Update the Label text when a new item is selected
+            if (newValue != null) {
+                folderPathLabel.setText(newValue.getValue().getFilePath());
+            }
+        });
+        //
+        browsedFileIndex = 0;
+        //
+        algoComboBox.setOnAction(event -> {
+            // Update the Label text when a new item is selected
+            String selectedItem = (String) algoComboBox.getSelectionModel().getSelectedItem();
+            algorithms[browsedFileIndex] = selectedItem;
+        });
     }
     @FXML
     private ProgressIndicator treeViewProgress;
+    private TreeItem<FileWrapper> rootItem;
+    private TreeItem<FileWrapper> folderItem;
     private Task<Void> setRootTreeViewTask(){
         return new Task<>(){
             @Override
             protected Void call() throws Exception {
-                TreeItem<FileWrapper> rootItem = createFileTreeItem(new File(rootFolderPath));
+                TreeItem<FileWrapper>[] result = createFileTreeItem(new File(rootFolderPath));
+                rootItem = result[0];
+                folderItem = result[1];
+                Platform.runLater(() -> switchToFolderItem());
                 rootItem.setExpanded(true);
-                Platform.runLater(() -> rootFolderTreeView.setRoot(rootItem));
+                folderItem.setExpanded(true);
+//                folderItem = createFolderTreeItem(new File(rootFolderPath));
                 return null;
             }
         };
@@ -209,8 +226,8 @@ public class ProfileScreenController implements Initializable {
     }
 
 
-    File browsedFile;
-    public File browseFile(){
+    File browsedEncryptedFile;
+    public File browseEncryptedFile(){
         FileChooser encryptedFileChooser = new FileChooser();
         encryptedFileChooser.setInitialDirectory(new File(rootFolderPath));
         File encryptedFile = encryptedFileChooser.showSaveDialog(null);
@@ -222,12 +239,16 @@ public class ProfileScreenController implements Initializable {
         }
         return encryptedFile;
     }
-    public void encryptFileUsingAES(){
+    public void encryptFileUsingAES(File browsedFile){
         try {
             // Generate a random AES key
             assert browsedFile != null;
-            File encryptedFile = browseFile();
-
+            if(folderPathLabel.getText().equals("")){
+                GuiUtil.alert(Alert.AlertType.ERROR,"Folder not selected!");
+                return;
+            }
+            File encryptedFile = new File(folderPathLabel.getText()+"/"+browsedFile.getName());
+            encryptedFile.createNewFile();
             KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
             keyGenerator.init(256, new SecureRandom());
             SecretKey secretKey = keyGenerator.generateKey();
@@ -256,19 +277,21 @@ public class ProfileScreenController implements Initializable {
             cipherOutputStream.close();
             inputStream.close();
             outputStream.close();
-            browsedFile = null;
             System.out.println("File encrypted successfully.");
+            //
+            folderPathLabel.setText("");
         } catch(AssertionError e){
             GuiUtil.alert(Alert.AlertType.ERROR,"No files or folder selected!");
             e.printStackTrace();
         }catch (Exception e) {
+            // add the file to error list for display in Alert
             e.printStackTrace();
         }
     }
     public void encryptFileUsingTripleDES(){
         try {
-            assert browsedFile != null;
-            File encryptedFile = browseFile();
+            assert browsedEncryptedFile != null;
+            File encryptedFile = browseEncryptedFile();
 
             // Generate a random 192-bit (24-byte) secret key
             SecureRandom random = new SecureRandom();
@@ -285,7 +308,7 @@ public class ProfileScreenController implements Initializable {
             cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(iv));
 
             // Create input and output streams
-            FileInputStream inputStream = new FileInputStream(browsedFile);
+            FileInputStream inputStream = new FileInputStream(browsedEncryptedFile);
             FileOutputStream outputStream = new FileOutputStream(encryptedFile);
 
             // Write the IV to the output file
@@ -312,8 +335,8 @@ public class ProfileScreenController implements Initializable {
     }
     public void encryptFileUsingRSA(){
         try {
-            assert browsedFile != null;
-            File encryptedFile = browseFile();
+            assert browsedEncryptedFile != null;
+            File encryptedFile = browseEncryptedFile();
             // Generate RSA key pair (public and private key)
             KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
             keyPairGenerator.initialize(2048); // Key size
@@ -325,7 +348,7 @@ public class ProfileScreenController implements Initializable {
             Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
             cipher.init(Cipher.ENCRYPT_MODE, publicKey);
 
-            FileInputStream inputStream = new FileInputStream(browsedFile);
+            FileInputStream inputStream = new FileInputStream(browsedEncryptedFile);
             FileOutputStream outputStream = new FileOutputStream(encryptedFile);
             CipherOutputStream cipherOutputStream = new CipherOutputStream(outputStream, cipher);
 
@@ -346,30 +369,24 @@ public class ProfileScreenController implements Initializable {
         }
     }
     public void encryptFile(){
-        String algo = algoLabel.getText();
-        if(algo.equals("AES")){
-            encryptFileUsingAES();
-        }
-        else if(algo.equals("3DES")){
+        if(browsedFiles != null){
+            for(int fileIndex=0;fileIndex<browsedFiles.size();fileIndex++){
+                if(algorithms[fileIndex].equals("AES")){
+                    encryptFileUsingAES(browsedFiles.get(fileIndex));
+                }
+                else if(algorithms[fileIndex].equals("3DES")){
 
-        }
-        else if(algo.equals("RSA")){
+                }
+                else if(algorithms[fileIndex].equals("RSA")){
 
+                }
+            }
         }
-        else{
-            GuiUtil.alert(Alert.AlertType.ERROR,"Algorithm does not exist!");
-        }
-    }
-    public void forAES(){
-        algoLabel.setText("AES");
-    }
-    public void setAlgorithmMenuItems(){
-
-    }
-    public void browseFolder(){
-
     }
     public void encryptFolder(){
+
+    }
+    public void setAlgorithmMenuItems(){
 
     }
 
@@ -383,8 +400,6 @@ public class ProfileScreenController implements Initializable {
 
     @FXML
     private Button listViewToggleButton;
-
-    private String searchDirectory = "C:\\Users\\Akshat\\Downloads\\Transport Company"; // Change to the directory you want to search
 
     private Timeline searchDelay = new Timeline();
 
@@ -403,7 +418,7 @@ public class ProfileScreenController implements Initializable {
         String searchTerm = searchField.getText();
 //        searchResultFlowPane.getChildren().clear();
         if (searchTerm.length() > 0) {
-            List<String> foundFiles = searchFiles(searchDirectory, searchTerm);
+            List<String> foundFiles = searchFiles(rootFolderPath, searchTerm);
 //            for(File file : foundFiles){
 //                FileSystemView fileSystemView = FileSystemView.getFileSystemView();
 //                Icon icon = fileSystemView.getSystemIcon(file);
@@ -468,20 +483,41 @@ public class ProfileScreenController implements Initializable {
 //    @FXML
 //    private ScrollPane treeViewScrollPane;
     @FXML
-    private TreeView rootFolderTreeView;
-    private TreeItem<FileWrapper> createFileTreeItem(File file){
-        TreeItem<FileWrapper> fileTreeItem = new TreeItem<>(new FileWrapper(file.getName(),file.getAbsolutePath()));
+    private TreeView<FileWrapper> rootFolderTreeView;
+    private TreeItem<FileWrapper>[] createFileTreeItem(File file){
+        String fileName = file.getName();
+        String filePath = file.getAbsolutePath();
+        TreeItem<FileWrapper> fileTreeItem = new TreeItem<>(new FileWrapper(fileName,filePath));
+        TreeItem<FileWrapper> folderTreeItem = null;
         if (file.isDirectory()) {
             // If it's a directory, recursively add its children
+            folderTreeItem = new TreeItem<>(new FileWrapper(fileName,filePath));
             File[] children = file.listFiles();
             if (children != null) {
                 for (File child : children) {
-                    fileTreeItem.getChildren().add(createFileTreeItem(child));
+                    TreeItem<FileWrapper>[] result = createFileTreeItem(child);
+                    fileTreeItem.getChildren().add(result[0]);
+                    if(result[1] != null) folderTreeItem.getChildren().add(result[1]);
                 }
             }
         }
-        return fileTreeItem;
+//        filePathToTreeItemMap.put(filePath,fileTreeItem);
+        return new TreeItem[]{fileTreeItem, folderTreeItem};
     }
+//    private TreeItem<FileWrapper> createFolderTreeItem(File file){
+//        TreeItem<FileWrapper> fileTreeItem = null;
+//        if (file.isDirectory()) {
+//            fileTreeItem = new TreeItem<>(new FileWrapper(file.getName(),file.getAbsolutePath()));
+//            // If it's a directory, recursively add its children
+//            File[] children = file.listFiles();
+//            if (children != null) {
+//                for (File child : children) {
+//                    fileTreeItem.getChildren().add(createFileTreeItem(child));
+//                }
+//            }
+//        }
+//        return fileTreeItem;
+//    }
 //    private void displaySearchResults(List<File> foundFiles) {
 //        resultTextArea.clear();
 //
@@ -529,5 +565,70 @@ public class ProfileScreenController implements Initializable {
     }
     public void toggleShareOptionAnchorPane(){
         shareOptionAnchorPane.setVisible(!shareOptionAnchorPane.isVisible());
+    }
+    List<File> browsedFiles;
+    String[] algorithms;
+    private int browsedFilesListSize;
+    private int browsedFileIndex;
+    @FXML
+    private Button browseFilesButton;
+    public void openFileChooser(){
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Select File");
+        browsedFiles = fileChooser.showOpenMultipleDialog(null);
+        browsedFilesListSize = browsedFiles.size();
+        algorithms = new String[browsedFilesListSize];
+        Arrays.fill(algorithms,"AES");
+        setFileIconImageViews();
+    }
+    public void setAlgoComboBox(){
+        algoComboBox.setValue(algorithms[browsedFileIndex]);
+    }
+    public void setFileIconImageViews(){
+        if(browsedFiles.size()>1){
+            nextFileIconImageView.setImage(FileIconUtil.getFileIcon(browsedFiles.get((browsedFileIndex+1)%browsedFilesListSize)));
+        }
+        if(browsedFiles.size()>2){
+            previousFileIconImageView.setImage(FileIconUtil.getFileIcon(browsedFiles.get((browsedFileIndex-1+browsedFilesListSize)%browsedFilesListSize)));
+        }
+        currentFileIconImageView.setImage(FileIconUtil.getFileIcon(browsedFiles.get(browsedFileIndex)));
+        setAlgoComboBox();
+    }
+    File browsedFolder;
+    @FXML
+    private Button browseFolderButton;
+    public void openFolderChooser() {
+        DirectoryChooser directoryChooser = new DirectoryChooser();
+        directoryChooser.setTitle("Select Folder");
+        browsedFolder = directoryChooser.showDialog(null);
+    }
+    @FXML
+    private ImageView currentFileIconImageView;
+    @FXML
+    private ImageView nextFileIconImageView;
+    @FXML
+    private ImageView previousFileIconImageView;
+    @FXML
+    private Button previousIconButton;
+    @FXML
+    private Button nextIconButton;
+    @FXML
+    private ComboBox algoComboBox;
+    public void nextBrowsedFile() throws FileNotFoundException {
+        browsedFileIndex = (browsedFileIndex+1)%browsedFilesListSize;
+        setFileIconImageViews();
+        setAlgoComboBox();
+    }
+    public void previousBrowsedFile()throws FileNotFoundException {
+        browsedFileIndex = (browsedFileIndex-1+browsedFilesListSize)%browsedFilesListSize;
+        setFileIconImageViews();
+        setAlgoComboBox();
+    }
+//    private Map<String,TreeItem<FileWrapper>> filePathToTreeItemMap;
+    public void switchToRootItem(){
+        if(rootItem!=null) rootFolderTreeView.setRoot(rootItem);
+    }
+    public void switchToFolderItem(){
+        if(folderItem!=null) rootFolderTreeView.setRoot(folderItem);
     }
 }
