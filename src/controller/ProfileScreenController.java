@@ -288,10 +288,15 @@ public class ProfileScreenController implements Initializable {
             e.printStackTrace();
         }
     }
-    public void encryptFileUsingTripleDES(){
+    public void encryptFileUsingTripleDES(File browsedFile){
         try {
-            assert browsedEncryptedFile != null;
-            File encryptedFile = browseEncryptedFile();
+            assert browsedFile != null;
+            if(folderPathLabel.getText().equals("")){
+                GuiUtil.alert(Alert.AlertType.ERROR,"Folder not selected!");
+                return;
+            }
+            File encryptedFile = new File(folderPathLabel.getText()+"/"+browsedFile.getName());
+            encryptedFile.createNewFile();
 
             // Generate a random 192-bit (24-byte) secret key
             SecureRandom random = new SecureRandom();
@@ -308,7 +313,7 @@ public class ProfileScreenController implements Initializable {
             cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(iv));
 
             // Create input and output streams
-            FileInputStream inputStream = new FileInputStream(browsedEncryptedFile);
+            FileInputStream inputStream = new FileInputStream(browsedFile);
             FileOutputStream outputStream = new FileOutputStream(encryptedFile);
 
             // Write the IV to the output file
@@ -382,8 +387,14 @@ public class ProfileScreenController implements Initializable {
                 }
             }
         }
+        clearFileIconImageViews();
+        browsedFiles = null;
+        algorithms = null;
     }
     public void clearFileIconImageViews(){
+        currentFileIconImageView.setImage(null);
+        previousFileIconImageView.setImage(null);
+        nextFileIconImageView.setImage(null);
     }
     public void encryptFolder(){
 
