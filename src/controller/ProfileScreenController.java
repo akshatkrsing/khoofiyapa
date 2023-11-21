@@ -338,10 +338,15 @@ public class ProfileScreenController implements Initializable {
             e.printStackTrace();
         }
     }
-    public void encryptFileUsingRSA(){
+    public void encryptFileUsingRSA(File browsedFile){
         try {
-            assert browsedEncryptedFile != null;
-            File encryptedFile = browseEncryptedFile();
+            assert browsedFile != null;
+            if(folderPathLabel.getText().equals("")){
+                GuiUtil.alert(Alert.AlertType.ERROR,"Folder not selected!");
+                return;
+            }
+            File encryptedFile = new File(folderPathLabel.getText()+"/"+browsedFile.getName());
+            encryptedFile.createNewFile();
             // Generate RSA key pair (public and private key)
             KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
             keyPairGenerator.initialize(2048); // Key size
@@ -353,7 +358,7 @@ public class ProfileScreenController implements Initializable {
             Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
             cipher.init(Cipher.ENCRYPT_MODE, publicKey);
 
-            FileInputStream inputStream = new FileInputStream(browsedEncryptedFile);
+            FileInputStream inputStream = new FileInputStream(browsedFile);
             FileOutputStream outputStream = new FileOutputStream(encryptedFile);
             CipherOutputStream cipherOutputStream = new CipherOutputStream(outputStream, cipher);
 
@@ -380,10 +385,10 @@ public class ProfileScreenController implements Initializable {
                     encryptFileUsingAES(browsedFiles.get(fileIndex));
                 }
                 else if(algorithms[fileIndex].equals("3DES")){
-
+                    encryptFileUsingTripleDES(browsedFiles.get(fileIndex));
                 }
                 else if(algorithms[fileIndex].equals("RSA")){
-
+                    encryptFileUsingRSA(browsedFiles.get(fileIndex));
                 }
             }
         }
