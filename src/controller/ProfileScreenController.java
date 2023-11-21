@@ -201,6 +201,7 @@ public class ProfileScreenController implements Initializable {
             String selectedItem = (String) algoComboBox.getSelectionModel().getSelectedItem();
             algorithms[browsedFileIndex] = selectedItem;
         });
+        fillAlgoComboBox();
     }
     @FXML
     private ProgressIndicator treeViewProgress;
@@ -279,7 +280,6 @@ public class ProfileScreenController implements Initializable {
             outputStream.close();
             System.out.println("File encrypted successfully.");
             //
-            folderPathLabel.setText("");
         } catch(AssertionError e){
             GuiUtil.alert(Alert.AlertType.ERROR,"No files or folder selected!");
             e.printStackTrace();
@@ -383,6 +383,8 @@ public class ProfileScreenController implements Initializable {
             }
         }
         clearFileIconImageViews();
+        folderPathLabel.setText("");
+        algoComboBox.setValue("");
         browsedFiles = null;
         algorithms = null;
     }
@@ -622,6 +624,9 @@ public class ProfileScreenController implements Initializable {
     private Button nextIconButton;
     @FXML
     private ComboBox algoComboBox;
+    public void fillAlgoComboBox(){
+        algoComboBox.getItems().addAll("AES", "3DES", "RSA");
+    }
     public void nextBrowsedFile() throws FileNotFoundException {
         browsedFileIndex = (browsedFileIndex+1)%browsedFilesListSize;
         setFileIconImageViews();
