@@ -383,6 +383,8 @@ public class ProfileScreenController implements Initializable {
             }
         }
     }
+    public void clearFileIconImageViews(){
+    }
     public void encryptFolder(){
 
     }
