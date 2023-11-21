@@ -382,9 +382,14 @@ public class ProfileScreenController implements Initializable {
                 }
             }
         }
+        clearFileIconImageViews();
+        browsedFiles = null;
+        algorithms = null;
     }
     public void clearFileIconImageViews(){
-        currentFileIconImageView.getImage().
+        currentFileIconImageView.setImage(null);
+        previousFileIconImageView.setImage(null);
+        nextFileIconImageView.setImage(null);
     }
     public void encryptFolder(){
 
