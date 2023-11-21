@@ -198,8 +198,10 @@ public class ProfileScreenController implements Initializable {
         //
         algoComboBox.setOnAction(event -> {
             // Update the Label text when a new item is selected
-            String selectedItem = (String) algoComboBox.getSelectionModel().getSelectedItem();
-            algorithms[browsedFileIndex] = selectedItem;
+            if(algorithms != null){
+                String selectedItem = (String) algoComboBox.getSelectionModel().getSelectedItem();
+                algorithms[browsedFileIndex] = selectedItem;
+            }
         });
         fillAlgoComboBox();
     }
@@ -604,13 +606,17 @@ public class ProfileScreenController implements Initializable {
         currentFileIconImageView.setImage(FileIconUtil.getFileIcon(browsedFiles.get(browsedFileIndex)));
         setAlgoComboBox();
     }
-    File browsedFolder;
     @FXML
     private Button browseFolderButton;
     public void openFolderChooser() {
         DirectoryChooser directoryChooser = new DirectoryChooser();
         directoryChooser.setTitle("Select Folder");
-        browsedFolder = directoryChooser.showDialog(null);
+        browsedFiles = new ArrayList<>(1);
+        browsedFiles.add(directoryChooser.showDialog(null));
+        browsedFilesListSize = 1;
+        algorithms = new String[browsedFilesListSize];
+        Arrays.fill(algorithms,"AES");
+        setFileIconImageViews();
     }
     @FXML
     private ImageView currentFileIconImageView;
