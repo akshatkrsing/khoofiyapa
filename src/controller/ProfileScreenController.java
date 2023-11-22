@@ -32,10 +32,8 @@ import table.ParamsTable;
 import util.FileIconUtil;
 import util.GuiUtil;
 
-import javax.crypto.Cipher;
-import javax.crypto.CipherOutputStream;
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
+import javax.crypto.*;
+import javax.crypto.spec.DESKeySpec;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.awt.*;
@@ -47,6 +45,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.*;
+import java.security.spec.KeySpec;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -186,6 +185,8 @@ public class ProfileScreenController implements Initializable {
             // Update the Label text when a new item is selected
             if (newValue != null) {
                 folderPathLabel.setText(newValue.getValue().getFilePath());
+                File file = new File(newValue.getValue().getFilePath());
+                if(!file.isDirectory()) encryptedFileLabel.setText(newValue.getValue().getFilePath());
             }
         });
         //
@@ -220,6 +221,10 @@ public class ProfileScreenController implements Initializable {
         };
     }
     public void refresh(){
+        rootFolderTreeView.setRoot(null);
+        treeViewProgress.setVisible(true);
+        rootItem = null;
+        folderItem = null;
         Task<Void> rootTreeViewTask = setRootTreeViewTask();
         treeViewProgress.progressProperty().bind(rootTreeViewTask.progressProperty());
 
@@ -252,22 +257,18 @@ public class ProfileScreenController implements Initializable {
             if(browsedFile == null) return;
             File encryptedFile = new File(folderPath+"/"+browsedFile.getName());
             encryptedFile.createNewFile();
+            byte[] ivBytes = generateRandomIV();
             KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
-            keyGenerator.init(256, new SecureRandom());
+            keyGenerator.init(256);
             SecretKey secretKey = keyGenerator.generateKey();
-
-            // Create a random IV (Initialization Vector)
-            byte[] iv = new byte[16];
-            SecureRandom random = new SecureRandom();
-            random.nextBytes(iv);
-
+            System.out.println("Secret key: "+secretKey);
             // Initialize the AES cipher for encryption
             Cipher encryptCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-            encryptCipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(iv));
+            encryptCipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(ivBytes));
 
             FileInputStream inputStream = new FileInputStream(browsedFile);
             FileOutputStream outputStream = new FileOutputStream(encryptedFile);
-            outputStream.write(iv); // Write the IV to the output file
+            // Did not write IV to the output file
 
             CipherOutputStream cipherOutputStream = new CipherOutputStream(outputStream, encryptCipher);
 
@@ -286,6 +287,11 @@ public class ProfileScreenController implements Initializable {
             // add the file to error list for display in Alert
             e.printStackTrace();
         }
+    }
+    public static byte[] generateRandomIV() {
+        byte[] iv = new byte[16]; // 16 bytes for AES
+        new SecureRandom().nextBytes(iv);
+        return iv;
     }
     public void encryptFileUsingTripleDES(File browsedFile){
         try {
@@ -377,6 +383,7 @@ public class ProfileScreenController implements Initializable {
             e.printStackTrace();
         }
     }
+    TreeView<FileWrapper> selectedItem;
     public void encryptFile() throws IOException {
         if(folderPathLabel.getText().equals("")){
             GuiUtil.alert(Alert.AlertType.ERROR,"Folder not selected!");
@@ -435,6 +442,68 @@ public class ProfileScreenController implements Initializable {
 
             }
         }
+    }
+    // Decrypt
+    public static byte[] secretKeyToByteArray(SecretKey secretKey) {
+        // Extract the encoded form of the SecretKey
+        return secretKey.getEncoded();
+    }
+    public static SecretKey byteArrayToAESSecretKey(byte[] keyBytes) {
+        // Convert the byte array to a SecretKey using SecretKeySpec
+        return new SecretKeySpec(keyBytes, "AES");
+    }
+    public static SecretKey byteArrayToDESSecretKey(byte[] keyBytes) {
+        try {
+            // Convert the byte array to a SecretKey using DESKeySpec and SecretKeyFactory
+            KeySpec keySpec = new DESKeySpec(keyBytes);
+            SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("DES");
+            return keyFactory.generateSecret(keySpec);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+    public void decryptFileUsingAES(File inputFile, byte[] secretKeyByteArray) throws Exception {
+        SecretKey key = byteArrayToAESSecretKey(secretKeyByteArray);
+        // Initialize the Cipher in decryption mode
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        byte[] ivBytes = readIVFromFile(inputFile);
+        cipher.init(Cipher.DECRYPT_MODE,key,new IvParameterSpec(ivBytes));
+        FileChooser fileChooser = new FileChooser();
+        File outputFile = fileChooser.showSaveDialog(null);
+        fileChooser.setTitle("Save File");
+        if(outputFile == null){
+            System.out.println("File not decrypted!");
+            return;
+        }
+        outputFile.createNewFile();
+        // Create a CipherInputStream to read the encrypted file
+        try (FileInputStream fis = new FileInputStream(inputFile);
+             CipherInputStream cis = new CipherInputStream(fis, cipher);
+             FileOutputStream fos = new FileOutputStream(outputFile)) {
+
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = cis.read(buffer)) != -1) {
+                fos.write(buffer, 0, bytesRead);
+            }
+        }
+    }
+    public static byte[] readIVFromFile(File file) throws Exception {
+        // Read the first 16 bytes of the file as the IV
+        byte[] ivBytes = new byte[16];
+        try (FileInputStream fis = new FileInputStream(file)) {
+            fis.read(ivBytes);
+        }
+        return ivBytes;
+    }
+    @FXML
+    private Button decryptFileButton;
+    @FXML
+    private Label encryptedFileLabel;
+    public void decryptFile() throws Exception {
+        File file = new File(encryptedFileLabel.getText());
+        decryptFileUsingAES(file,null);
     }
     public void setAlgorithmMenuItems(){
 
