@@ -287,10 +287,15 @@ public class ProfileScreenController implements Initializable {
             e.printStackTrace();
         }
     }
-    public void encryptFileUsingTripleDES(){
+    public void encryptFileUsingTripleDES(File browsedFile){
         try {
-            assert browsedEncryptedFile != null;
-            File encryptedFile = browseEncryptedFile();
+            assert browsedFile != null;
+            if(folderPathLabel.getText().equals("")){
+                GuiUtil.alert(Alert.AlertType.ERROR,"Folder not selected!");
+                return;
+            }
+            File encryptedFile = new File(folderPathLabel.getText()+"/"+browsedFile.getName());
+            encryptedFile.createNewFile();
 
             // Generate a random 192-bit (24-byte) secret key
             SecureRandom random = new SecureRandom();
@@ -307,7 +312,7 @@ public class ProfileScreenController implements Initializable {
             cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(iv));
 
             // Create input and output streams
-            FileInputStream inputStream = new FileInputStream(browsedEncryptedFile);
+            FileInputStream inputStream = new FileInputStream(browsedFile);
             FileOutputStream outputStream = new FileOutputStream(encryptedFile);
 
             // Write the IV to the output file
@@ -332,10 +337,15 @@ public class ProfileScreenController implements Initializable {
             e.printStackTrace();
         }
     }
-    public void encryptFileUsingRSA(){
+    public void encryptFileUsingRSA(File browsedFile){
         try {
-            assert browsedEncryptedFile != null;
-            File encryptedFile = browseEncryptedFile();
+            assert browsedFile != null;
+            if(folderPathLabel.getText().equals("")){
+                GuiUtil.alert(Alert.AlertType.ERROR,"Folder not selected!");
+                return;
+            }
+            File encryptedFile = new File(folderPathLabel.getText()+"/"+browsedFile.getName());
+            encryptedFile.createNewFile();
             // Generate RSA key pair (public and private key)
             KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
             keyPairGenerator.initialize(2048); // Key size
@@ -347,7 +357,7 @@ public class ProfileScreenController implements Initializable {
             Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
             cipher.init(Cipher.ENCRYPT_MODE, publicKey);
 
-            FileInputStream inputStream = new FileInputStream(browsedEncryptedFile);
+            FileInputStream inputStream = new FileInputStream(browsedFile);
             FileOutputStream outputStream = new FileOutputStream(encryptedFile);
             CipherOutputStream cipherOutputStream = new CipherOutputStream(outputStream, cipher);
 
@@ -437,7 +447,7 @@ public class ProfileScreenController implements Initializable {
 //    private FlowPane searchResultFlowPane;
     @FXML
     private ListView searchResultListView;
-
+    private String searchDirectory = "D:\\"; // Change to the directory you want to search
     @FXML
     private Button listViewToggleButton;
 
