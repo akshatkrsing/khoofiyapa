@@ -43,6 +43,9 @@ import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -175,16 +178,8 @@ public class ProfileScreenController implements Initializable {
             }
         });
         // use file wrapper
-        Task<Void> rootTreeViewTask = setRootTreeViewTask();
-        treeViewProgress.progressProperty().bind(rootTreeViewTask.progressProperty());
-
-        // When the task is complete, unbind the progress bar and reset its value
-        rootTreeViewTask.setOnSucceeded(event -> {
-            treeViewProgress.progressProperty().unbind();
-            treeViewProgress.setProgress(0.0);
-            treeViewProgress.setVisible(false);
-        });
-        new Thread(rootTreeViewTask).start();
+        // set tree view
+        refresh();
         //
         // Add a selection listener to the TreeView
         rootFolderTreeView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
@@ -225,7 +220,16 @@ public class ProfileScreenController implements Initializable {
         };
     }
     public void refresh(){
+        Task<Void> rootTreeViewTask = setRootTreeViewTask();
+        treeViewProgress.progressProperty().bind(rootTreeViewTask.progressProperty());
 
+        // When the task is complete, unbind the progress bar and reset its value
+        rootTreeViewTask.setOnSucceeded(event -> {
+            treeViewProgress.progressProperty().unbind();
+            treeViewProgress.setProgress(0.0);
+            treeViewProgress.setVisible(false);
+        });
+        new Thread(rootTreeViewTask).start();
     }
 
 
@@ -242,15 +246,11 @@ public class ProfileScreenController implements Initializable {
         }
         return encryptedFile;
     }
-    public void encryptFileUsingAES(File browsedFile){
+    public void encryptFileUsingAES(File browsedFile, String folderPath){
         try {
             // Generate a random AES key
-            assert browsedFile != null;
-            if(folderPathLabel.getText().equals("")){
-                GuiUtil.alert(Alert.AlertType.ERROR,"Folder not selected!");
-                return;
-            }
-            File encryptedFile = new File(folderPathLabel.getText()+"/"+browsedFile.getName());
+            if(browsedFile == null) return;
+            File encryptedFile = new File(folderPath+"/"+browsedFile.getName());
             encryptedFile.createNewFile();
             KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
             keyGenerator.init(256, new SecureRandom());
@@ -282,9 +282,6 @@ public class ProfileScreenController implements Initializable {
             outputStream.close();
             System.out.println("File encrypted successfully.");
             //
-        } catch(AssertionError e){
-            GuiUtil.alert(Alert.AlertType.ERROR,"No files or folder selected!");
-            e.printStackTrace();
         }catch (Exception e) {
             // add the file to error list for display in Alert
             e.printStackTrace();
@@ -370,17 +367,26 @@ public class ProfileScreenController implements Initializable {
             e.printStackTrace();
         }
     }
-    public void encryptFile(){
-        if(browsedFiles != null){
-            for(int fileIndex=0;fileIndex<browsedFiles.size();fileIndex++){
-                if(algorithms[fileIndex].equals("AES")){
-                    encryptFileUsingAES(browsedFiles.get(fileIndex));
-                }
-                else if(algorithms[fileIndex].equals("3DES")){
+    public void encryptFile() throws IOException {
+        if(folderPathLabel.getText().equals("")){
+            GuiUtil.alert(Alert.AlertType.ERROR,"Folder not selected!");
+            return;
+        }
+        if(browsedFiles.get(browsedFileIndex).isDirectory()){
+            encryptFolder(browsedFiles.get(browsedFileIndex),folderPathLabel.getText(),algorithms[browsedFileIndex]);
+        }
+        else{
+            if(browsedFiles != null){
+                for(int fileIndex=0;fileIndex<browsedFiles.size();fileIndex++){
+                    if(algorithms[fileIndex].equals("AES")){
+                        encryptFileUsingAES(browsedFiles.get(fileIndex), folderPathLabel.getText());
+                    }
+                    else if(algorithms[fileIndex].equals("3DES")){
 
-                }
-                else if(algorithms[fileIndex].equals("RSA")){
+                    }
+                    else if(algorithms[fileIndex].equals("RSA")){
 
+                    }
                 }
             }
         }
@@ -395,8 +401,30 @@ public class ProfileScreenController implements Initializable {
         previousFileIconImageView.setImage(null);
         nextFileIconImageView.setImage(null);
     }
-    public void encryptFolder(){
+    public void encryptFolder(File file, String absolutePath, String algorithm) throws IOException {
+        if(file.isDirectory()){
+            Path folder = Paths.get(absolutePath+"/"+file.getName());
+            if (!Files.exists(folder)) {
+                Files.createDirectories(folder);
+                File[] children = file.listFiles();
+                if(children != null){
+                    for(File child : children){
+                        encryptFolder(child,absolutePath+"/"+file.getName(),algorithm);
+                    }
+                }
+            }
+        }
+        else{
+            if(algorithm.equals("AES")){
+                encryptFileUsingAES(file,absolutePath);
+            }
+            else if(algorithm.equals("3DES")){
 
+            }
+            else if(algorithm.equals("RSA")){
+
+            }
+        }
     }
     public void setAlgorithmMenuItems(){
 
@@ -597,6 +625,7 @@ public class ProfileScreenController implements Initializable {
         algoComboBox.setValue(algorithms[browsedFileIndex]);
     }
     public void setFileIconImageViews(){
+        if(browsedFiles == null) return;
         if(browsedFiles.size()>1){
             nextFileIconImageView.setImage(FileIconUtil.getFileIcon(browsedFiles.get((browsedFileIndex+1)%browsedFilesListSize)));
         }
@@ -611,8 +640,10 @@ public class ProfileScreenController implements Initializable {
     public void openFolderChooser() {
         DirectoryChooser directoryChooser = new DirectoryChooser();
         directoryChooser.setTitle("Select Folder");
+        File file = directoryChooser.showDialog(null);
+        if(file == null) return;
         browsedFiles = new ArrayList<>(1);
-        browsedFiles.add(directoryChooser.showDialog(null));
+        browsedFiles.add(file);
         browsedFilesListSize = 1;
         algorithms = new String[browsedFilesListSize];
         Arrays.fill(algorithms,"AES");
