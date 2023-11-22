@@ -1,5 +1,6 @@
 package controller;
 
+import entity.Secrets;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.embed.swing.SwingFXUtils;
@@ -17,6 +18,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.FlowPane;
 import javafx.stage.FileChooser;
 import javafx.util.Duration;
+import table.SecretsTable;
 import util.GuiUtil;
 
 import javax.crypto.Cipher;
@@ -30,17 +32,19 @@ import javax.swing.filechooser.FileSystemView;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.URL;
 import java.security.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
 
 public class ProfileScreenController implements Initializable {
+
+    private Connection connection;
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
@@ -98,6 +102,28 @@ public class ProfileScreenController implements Initializable {
             throw new RuntimeException(e);
         }
         return encryptedFile;
+    }
+    public void encryptFile(File browsedFile,  SecretKey secretKey){
+        byte[] fileArray  = new byte[(int) browsedFile.length()];
+        String filename = browsedFile.getName();
+
+
+        Secrets secrets= new Secrets(filename, secretKey, fileArray);
+            int result = 0;
+            try {
+                InputStream fis= new ByteArrayInputStream(fileArray);
+                PreparedStatement preparedStatement=connection.prepareStatement(SecretsTable.QUERY_INSERT_TO_SECRETS_TABLE);
+
+                preparedStatement.setString(1,filename);
+                preparedStatement.setString(2, secretKey);
+                preparedStatement.setBlob(3,fis);
+                result=preparedStatement.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        if(result==0) System.out.println("failure");
+        else System.out.println("Successful");
+
     }
     public void encryptFileUsingAES(){
         try {
