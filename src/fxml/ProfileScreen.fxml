@@ -45,7 +45,7 @@
                                                       <MenuItem fx:id="rsaAlgoMenuItem" mnemonicParsing="false" text="RSA" />
                                                 </items>
                                               </Menu>
-                                                <MenuItem fx:id="refreshMenuItem" mnemonicParsing="false" text="Refresh..." />
+                                                <MenuItem fx:id="refreshMenuItem" mnemonicParsing="false" onAction="#refresh" text="Refresh..." />
                                                 <Menu mnemonicParsing="false" text="Settings">
                                                   <items>
                                                       <Menu mnemonicParsing="false" text="Private Key">
@@ -96,13 +96,16 @@
                                     <TextField fx:id="searchField" layoutX="26.0" layoutY="14.0" prefHeight="27.0" prefWidth="281.0" />
                                     <Button fx:id="listViewToggleButton" layoutX="307.0" layoutY="15.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="77.0" text="Toggle" />
                                     <ListView fx:id="searchResultListView" layoutX="26.0" layoutY="40.0" prefHeight="83.0" prefWidth="281.0" />
-                                    <Button fx:id="shareDecryptedFileButton" layoutX="57.0" layoutY="250.0" mnemonicParsing="false" onAction="#toggleShareOptionAnchorPane" prefHeight="25.0" prefWidth="299.0" text="Share" />
+                                    <Button fx:id="shareDecryptedFileButton" layoutX="298.0" layoutY="224.0" mnemonicParsing="false" onAction="#toggleShareOptionAnchorPane" prefHeight="25.0" prefWidth="57.33333" text="Share" />
                                     <AnchorPane fx:id="shareOptionAnchorPane" layoutX="57.0" layoutY="275.0" prefHeight="89.0" prefWidth="299.0">
                                        <children>
                                           <Button fx:id="shareViaWhatsappButton" layoutX="41.0" layoutY="20.0" mnemonicParsing="false" onAction="#shareViaWhatsapp" prefHeight="37.0" prefWidth="83.0" text="Whatsapp" />
                                           <Button fx:id="shareViaMailButton" layoutX="172.0" layoutY="20.0" mnemonicParsing="false" onAction="#shareViaMail" prefHeight="37.0" prefWidth="83.0" text="Gmail" />
                                        </children>
                                     </AnchorPane>
+                                    <Button fx:id="decryptFileButton" layoutX="57.0" layoutY="224.0" mnemonicParsing="false" onAction="#decryptFile" text="Decrypt" />
+                                    <Button layoutX="181.0" layoutY="224.0" mnemonicParsing="false" prefWidth="57.33333" text="Edit" />
+                                    <Label fx:id="encryptedFileLabel" layoutX="35.0" layoutY="176.0" prefHeight="17.0" prefWidth="307.0" />
                                  </children>
                               </AnchorPane>
                            </content>
