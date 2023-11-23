@@ -184,9 +184,8 @@ public class ProfileScreenController implements Initializable {
         rootFolderTreeView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             // Update the Label text when a new item is selected
             if (newValue != null) {
-                folderPathLabel.setText(newValue.getValue().getFilePath());
-                File file = new File(newValue.getValue().getFilePath());
-                if(!file.isDirectory()) encryptedFileLabel.setText(newValue.getValue().getFilePath());
+                if(encryptTab.isSelected()) folderPathLabel.setText(newValue.getValue().getFilePath());
+                if(decryptTab.isSelected()) encryptedFileLabel.setText(newValue.getValue().getFilePath());
             }
         });
         //
@@ -212,7 +211,10 @@ public class ProfileScreenController implements Initializable {
                 TreeItem<FileWrapper>[] result = createFileTreeItem(new File(rootFolderPath));
                 rootItem = result[0];
                 folderItem = result[1];
-                Platform.runLater(() -> switchToFolderItem());
+                Platform.runLater(() -> {
+                    if(encryptTab.isSelected()) switchToFolderItem();
+                    else switchToRootItem();
+                });
                 rootItem.setExpanded(true);
                 folderItem.setExpanded(true);
 //                folderItem = createFolderTreeItem(new File(rootFolderPath));
@@ -760,4 +762,8 @@ public class ProfileScreenController implements Initializable {
     public void switchToFolderItem(){
         if(folderItem!=null) rootFolderTreeView.setRoot(folderItem);
     }
+    @FXML
+    private Tab encryptTab;
+    @FXML
+    private Tab decryptTab;
 }
