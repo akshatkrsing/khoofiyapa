@@ -577,6 +577,7 @@ public class ProfileScreenController implements Initializable {
         }
     }
     public void shareViaMail(){
+
         try{
             assert selectedFile != null;
             Desktop.getDesktop().mail(selectedFile.toURI());
