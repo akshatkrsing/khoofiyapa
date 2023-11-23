@@ -11,6 +11,7 @@ import java.io.File;
 
 public class FileIconUtil {
     public static Image getFileIcon(File file){
+        if(file == null) return null;
         FileSystemView fileSystemView = FileSystemView.getFileSystemView();
         Icon icon = fileSystemView.getSystemIcon(file);
         int width = icon.getIconWidth();
