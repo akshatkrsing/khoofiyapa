@@ -10,4 +10,7 @@ public class ParamsTable {
 
 
     public static String QUERY_VERIFY="SELECT * FROM "+TABLE_NAME+" WHERE "+COLUMN_PARAM_NAME+" =? AND "+ COLUMN_PARAM_VALUE+"= ?;";;
+
+    public static final String QUERY_CHANGE_PASSWORD= "UPDATE "+ TABLE_NAME + " SET "+ COLUMN_PARAM_VALUE +
+            " = ? WHERE "+ COLUMN_PARAM_NAME + " = ? AND "+ COLUMN_PARAM_VALUE +" = ?;";
 }

@@ -37,11 +37,13 @@ import table.HistoriesTable;
 import table.ParamsTable;
 import util.FileIconUtil;
 import util.GuiUtil;
+import util.HashUtil;
 
 import javax.crypto.*;
 import javax.crypto.spec.DESKeySpec;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import javax.swing.*;
 import java.awt.*;
 import java.io.*;
 import java.net.URI;
@@ -878,5 +880,41 @@ public class ProfileScreenController implements Initializable {
 //        } catch (IOException ex) {
 //            throw new RuntimeException(ex);
 //        }
+    }
+    @FXML
+    private PasswordField oldPasswordTextField;
+    @FXML
+    private PasswordField newPasswordTextField;
+    @FXML
+    private PasswordField confirmNewPasswordTextField;
+
+
+    public void changePassword(ActionEvent actionEvent) {
+        String oldPassword = oldPasswordTextField.getText();
+        String newPassword = newPasswordTextField.getText();
+        String confirmedNewPassword = confirmNewPasswordTextField.getText();
+        if(newPassword.equals(confirmedNewPassword)) {
+            try {
+                PreparedStatement preparedStatement=connection.prepareStatement(ParamsTable.QUERY_CHANGE_PASSWORD);
+                preparedStatement.setString(1, HashUtil.getMd5(newPassword));
+                preparedStatement.setString(2,"password");
+                preparedStatement.setString(3, HashUtil.getMd5(oldPassword));
+                int result= preparedStatement.executeUpdate();
+
+                System.out.println("password changed");
+                if(result>0) {
+                    JOptionPane.showMessageDialog(null,"Password changed successfully!");
+                }
+                else {
+                    JOptionPane.showMessageDialog(null,"Some error occurred.");
+                }
+
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        else {
+            JOptionPane.showMessageDialog(null,"New password fields don't match.");
+        }
     }
 }
