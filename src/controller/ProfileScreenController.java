@@ -1,6 +1,5 @@
 package controller;
 
-import com.sun.javafx.scene.control.SelectedCellsMap;
 import entity.FileWrapper;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -15,12 +14,12 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
-import javafx.scene.control.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -31,17 +30,19 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-
 import main.Main;
 import table.HistoriesTable;
 import table.ParamsTable;
+import table.SecretsTable;
 import util.FileIconUtil;
 import util.GuiUtil;
+import util.HashUtil;
 
 import javax.crypto.*;
 import javax.crypto.spec.DESKeySpec;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import javax.swing.*;
 import java.awt.*;
 import java.awt.Menu;
 import java.io.*;
@@ -53,18 +54,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.*;
 import java.security.spec.KeySpec;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.*;
+import java.sql.*;
 import java.util.List;
+import java.util.*;
 
 public class ProfileScreenController implements Initializable {
-
-
-
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
@@ -117,9 +112,7 @@ public class ProfileScreenController implements Initializable {
         searchField.setPromptText("Enter search term");
         connection = Main.getConnection();
 
-
-
-
+        //setting path
         try {
             PreparedStatement preparedStatement = connection.prepareStatement(ParamsTable.QUERY_FETCH_PARAM_VALUE);
             preparedStatement.setString(1, "rootFolderPath");
@@ -131,11 +124,13 @@ public class ProfileScreenController implements Initializable {
         }
 
         if (rootFolderPath == null) {
+
             // Documents directory as default
             rootFolderPath = System.getProperty("user.home") + "\\Documents";
             System.out.println("Document Directory: " + rootFolderPath);
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("../fxml/setRootPathDialogFXML.fxml"));
-            // open dialog
+
+            // open set path dialog
             Dialog<ButtonType> dialog = new Dialog<>();
             dialog.setTitle("Custom Dialog");
             Stage dialogStage = (Stage) encryptButton.getScene().getWindow();
@@ -162,13 +157,12 @@ public class ProfileScreenController implements Initializable {
             dialog.getDialogPane().lookupButton(applyButtonType).addEventFilter(javafx.event.ActionEvent.ACTION, event -> {
                 System.out.println("Apply button clicked");
                 // check if folder exists
-
                 // Perform actions or validations here
                 rootFolderPath = setRootPathDialogController.rootFolderPathField.getText();
                 if (applyButtonType != null) {
                     dialog.getDialogPane().lookupButton(applyButtonType).setDisable(true);
                 }
-                //update param in db
+                //update param in database
 
                 event.consume(); // Consume the event to prevent the dialog from closing
             });
@@ -234,6 +228,12 @@ public class ProfileScreenController implements Initializable {
         Timestamp timeUpdated;
         String action;
         String algo;
+        try{
+            PreparedStatement preparedStatement = connection.prepareStatement(HistoriesTable.QUERY_INSERT_INTO_HISTORIES_TABLE);
+            System.out.println(preparedStatement);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
 
         try {
             PreparedStatement preparedStatement = connection.prepareStatement(HistoriesTable.QUERY_RETRIEVE_FROM_HISTORIES_TABLE);
@@ -241,10 +241,10 @@ public class ProfileScreenController implements Initializable {
         System.out.println(preparedStatement);
         ResultSet resultSet = preparedStatement.executeQuery();
         while (resultSet.next()) {
-            filename = resultSet.getString(HistoriesTable.COLUMN_FILE_NAME);
+            filename = resultSet.getString(SecretsTable.COLUMN_FILE_NAME);
             timeUpdated=resultSet.getTimestamp(HistoriesTable.COLUMN_ACTION_TIME);
             action=resultSet.getString(HistoriesTable.COLUMN_ACTION_TYPE);
-            algo=resultSet.getString(HistoriesTable.COLUMN_ALGO_USED);
+            algo=resultSet.getString(SecretsTable.COLUMN_FILE_ENCRYPTION);
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("../fxml/historyCardFXML.fxml"));
             try {
                 Node node = fxmlLoader.load();
@@ -905,20 +905,53 @@ public class ProfileScreenController implements Initializable {
 //        }
     }
     private void decryptFolder(File file, String destination) throws IOException {
-        if(file.isDirectory()){
-            Path folder = Paths.get(destination+"\\"+file.getName());
+        if (file.isDirectory()) {
+            Path folder = Paths.get(destination + "\\" + file.getName());
             if (!Files.exists(folder)) {
                 Files.createDirectories(folder);
                 File[] children = file.listFiles();
-                if(children != null){
-                    for(File child : children){
+                if (children != null) {
+                    for (File child : children) {
 
                     }
                 }
             }
-        }
-        else{
+        } else {
 
+        }
+    }
+    @FXML
+    private PasswordField oldPasswordTextField;
+    @FXML
+    private PasswordField newPasswordTextField;
+    @FXML
+    private PasswordField confirmNewPasswordTextField;
+
+
+    public void changePassword(ActionEvent actionEvent) {
+        String oldPassword = oldPasswordTextField.getText();
+        String newPassword = newPasswordTextField.getText();
+        String confirmedNewPassword = confirmNewPasswordTextField.getText();
+        if (newPassword.equals(confirmedNewPassword)) {
+            try {
+                PreparedStatement preparedStatement = connection.prepareStatement(ParamsTable.QUERY_CHANGE_PASSWORD);
+                preparedStatement.setString(1, HashUtil.getMd5(newPassword));
+                preparedStatement.setString(2, "password");
+                preparedStatement.setString(3, HashUtil.getMd5(oldPassword));
+                int result = preparedStatement.executeUpdate();
+
+                System.out.println("password changed");
+                if (result > 0) {
+                    JOptionPane.showMessageDialog(null, "Password changed successfully!");
+                } else {
+                    JOptionPane.showMessageDialog(null, "Some error occurred.");
+                }
+
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            JOptionPane.showMessageDialog(null, "New password fields don't match.");
         }
     }
     private void storeHistory(){

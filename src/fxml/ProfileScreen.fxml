@@ -127,6 +127,53 @@
                               </AnchorPane>
                            </content>
                         </Tab>
+                        <Tab text="ChangePassword">
+                           <content>
+                              <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                                 <children>
+                                    <AnchorPane prefHeight="387.2" prefWidth="413.6" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                       <children>
+                                          <Button fx:id="changePasswordButton" layoutX="137.0" layoutY="256.0" mnemonicParsing="false" onAction="#changePassword" prefHeight="31.0" prefWidth="164.0" text="Change password">
+                                             <font>
+                                                <Font size="15.0" />
+                                             </font>
+                                          </Button>
+                                          <Label layoutX="17.0" layoutY="49.0" prefHeight="18.0" prefWidth="186.0" text="Enter your password:   ">
+                                             <font>
+                                                <Font size="15.0" />
+                                             </font>
+                                          </Label>
+                                          <PasswordField fx:id="oldPasswordTextField" layoutX="204.0" layoutY="44.0" prefHeight="31.0" prefWidth="198.0" promptText="Current password here">
+                                             <font>
+                                                <Font size="15.0" />
+                                             </font>
+                                          </PasswordField>
+                                          <Label layoutX="17.0" layoutY="116.0" text="Enter the new password:   ">
+                                             <font>
+                                                <Font size="15.0" />
+                                             </font>
+                                          </Label>
+                                          <PasswordField fx:id="newPasswordTextField" layoutX="204.0" layoutY="111.0" prefHeight="31.0" prefWidth="198.0" promptText="New password here">
+                                             <font>
+                                                <Font size="15.0" />
+                                             </font>
+                                          </PasswordField>
+                                          <Label layoutX="17.0" layoutY="177.0" text="Confirm new password:">
+                                             <font>
+                                                <Font size="15.0" />
+                                             </font>
+                                          </Label>
+                                          <PasswordField fx:id="confirmNewPasswordTextField" layoutX="203.0" layoutY="172.0" prefHeight="31.0" prefWidth="198.0" promptText="Type new password again">
+                                             <font>
+                                                <Font size="15.0" />
+                                             </font>
+                                          </PasswordField>
+                                       </children>
+                                    </AnchorPane>
+                                 </children>
+                              </AnchorPane>
+                           </content>
+                        </Tab>
                      </tabs>
                   </TabPane>
                   <AnchorPane prefHeight="416.0" prefWidth="390.0">
