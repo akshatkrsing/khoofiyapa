@@ -25,7 +25,10 @@
    <center>
       <VBox prefHeight="200.0" prefWidth="100.0" BorderPane.alignment="CENTER">
          <children>
-            <AnchorPane prefHeight="83.0" prefWidth="804.0" />
+            <AnchorPane prefHeight="83.0" prefWidth="804.0">
+               <children>
+                  <Button fx:id="passBT" layoutX="437.0" layoutY="18.0" mnemonicParsing="false" onAction="#passAction" text="PasswordBT" />
+               </children></AnchorPane>
             <FlowPane prefHeight="441.0" prefWidth="804.0">
                <children>
                   <TabPane prefHeight="416.0" prefWidth="413.0" tabClosingPolicy="UNAVAILABLE">
@@ -114,6 +117,15 @@
                           <content>
                             <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
                           </content>
+                        </Tab>
+                        <Tab text="History">
+                           <content>
+                              <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                                 <children>
+                                    <VBox fx:id="historyContainer" layoutX="-3.0" layoutY="1.0" prefHeight="383.0" prefWidth="419.0" />
+                                 </children>
+                              </AnchorPane>
+                           </content>
                         </Tab>
                      </tabs>
                   </TabPane>

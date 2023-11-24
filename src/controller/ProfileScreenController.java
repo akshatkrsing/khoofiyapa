@@ -1,5 +1,6 @@
 package controller;
 
+import com.sun.javafx.scene.control.SelectedCellsMap;
 import entity.FileWrapper;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -9,9 +10,11 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Dialog;
@@ -23,12 +26,13 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import jdk.internal.reflect.FieldAccessor;
 import main.Main;
+import table.HistoriesTable;
 import table.ParamsTable;
 import table.SecretsTable;
 import util.ExtensionUtil;
@@ -48,17 +52,29 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.*;
+import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.*;
 import java.util.List;
 
 public class ProfileScreenController implements Initializable {
 
+
+    public ProfileScreenController() throws NoSuchAlgorithmException {
+    }
+
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
 
     }
+
     @FXML
     private MenuItem fileMenuItem;
     @FXML
@@ -85,26 +101,44 @@ public class ProfileScreenController implements Initializable {
     private CheckMenuItem customCheckMenuItem;
     @FXML
     private CheckMenuItem generatedCheckMenuItem;
+    @FXML
+    private VBox historyContainer;
+    @FXML
+    private Label fileNameLabel;
+    @FXML
+    private Label historyAlgoLabel;
+    @FXML
+    private Label timeStampLabel;
+    @FXML
+    private Label  actionLabel;
+
+
     String rootFolderPath;
     private BooleanProperty listViewVisible;
     private Connection connection;
-    public void first(){
+
+    public void first() throws SQLException {
         searchField.setPromptText("Enter search term");
         connection = Main.getConnection();
+
+
+
+
         try {
             PreparedStatement preparedStatement = connection.prepareStatement(ParamsTable.QUERY_FETCH_PARAM_VALUE);
-            preparedStatement.setString(1,"rootFolderPath");
+            preparedStatement.setString(1, "rootFolderPath");
             ResultSet resultSet = preparedStatement.executeQuery();
             resultSet.next();
             rootFolderPath = resultSet.getString(ParamsTable.COLUMN_PARAM_VALUE);
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        if(rootFolderPath == null){
+
+        if (rootFolderPath == null) {
             // Documents directory as default
             rootFolderPath = System.getProperty("user.home") + "\\Documents";
             System.out.println("Document Directory: " + rootFolderPath);
-            FXMLLoader fxmlLoader=new FXMLLoader(getClass().getResource("../fxml/setRootPathDialogFXML.fxml"));
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("../fxml/setRootPathDialogFXML.fxml"));
             // open dialog
             Dialog<ButtonType> dialog = new Dialog<>();
             dialog.setTitle("Custom Dialog");
@@ -117,7 +151,7 @@ public class ProfileScreenController implements Initializable {
                 System.out.println("Exception in ProfileScreenController while loading dialog region!");
                 e.printStackTrace();
             }
-            dialog.getDialogPane().getButtonTypes().addAll(ButtonType.APPLY,ButtonType.OK,ButtonType.CANCEL);
+            dialog.getDialogPane().getButtonTypes().addAll(ButtonType.APPLY, ButtonType.OK, ButtonType.CANCEL);
             dialog.getDialogPane().setContent(content);
             SetRootPathDialogController setRootPathDialogController = fxmlLoader.getController();
             setRootPathDialogController.first();
@@ -162,7 +196,7 @@ public class ProfileScreenController implements Initializable {
         });
 //        listViewToggleButton.setDisable(true);
         searchResultListView.setOnKeyPressed(event -> {
-            if (event.getCode() == KeyCode.DOWN  && searchResultListView.getSelectionModel().getSelectedItem() != null) {
+            if (event.getCode() == KeyCode.DOWN && searchResultListView.getSelectionModel().getSelectedItem() != null) {
                 searchField.setText(searchResultListView.getSelectionModel().getSelectedItem().toString());
 
                 int selectedIndex = searchResultListView.getSelectionModel().getSelectedIndex();
@@ -171,8 +205,7 @@ public class ProfileScreenController implements Initializable {
                     searchResultListView.getSelectionModel().select(selectedIndex + 1);
                     searchResultListView.scrollTo(selectedIndex + 1);
                 }
-            }
-            else if(event.getCode() == KeyCode.ENTER && searchResultListView.getSelectionModel().getSelectedItem() != null){
+            } else if (event.getCode() == KeyCode.ENTER && searchResultListView.getSelectionModel().getSelectedItem() != null) {
                 //
             }
         });
@@ -193,12 +226,54 @@ public class ProfileScreenController implements Initializable {
         //
         algoComboBox.setOnAction(event -> {
             // Update the Label text when a new item is selected
-            if(algorithms != null){
+            if (algorithms != null) {
                 String selectedItem = (String) algoComboBox.getSelectionModel().getSelectedItem();
                 algorithms[browsedFileIndex] = selectedItem;
             }
         });
         fillAlgoComboBox();
+
+        //history
+        String filename = null;
+        Timestamp timeUpdated;
+        String action;
+        String algo;
+
+        try {
+            PreparedStatement preparedStatement = connection.prepareStatement(HistoriesTable.QUERY_RETRIEVE_FROM_HISTORIES_TABLE);
+
+        System.out.println(preparedStatement);
+        ResultSet resultSet = preparedStatement.executeQuery();
+        while (resultSet.next()) {
+            filename = resultSet.getString(HistoriesTable.COLUMN_FILE_NAME);
+            timeUpdated=resultSet.getTimestamp(HistoriesTable.COLUMN_ACTION_TIME);
+            action=resultSet.getString(HistoriesTable.COLUMN_ACTION_TYPE);
+            algo=resultSet.getString(HistoriesTable.COLUMN_ALGO_USED);
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("../fxml/historyCardFXML.fxml"));
+            try {
+                Node node = fxmlLoader.load();
+                ProfileScreenController historyCardLayoutController = fxmlLoader.getController();
+
+                historyCardLayoutController.fileNameLabel.setText(filename);
+                historyCardLayoutController.timeStampLabel.setText(timeUpdated.toString());
+                historyCardLayoutController.actionLabel.setText(action);
+                historyCardLayoutController.historyAlgoLabel.setText(algo);
+
+                historyContainer.getChildren().add(node);
+
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }
+    }
+        catch (SQLException e){
+            e.printStackTrace();
+        }
+
+
+
     }
     @FXML
     private ProgressIndicator treeViewProgress;
@@ -259,7 +334,7 @@ public class ProfileScreenController implements Initializable {
             if(browsedFile == null) return;
             File encryptedFile = new File(folderPath+"\\"+browsedFile.getName());
             encryptedFile.createNewFile();
-            byte[] ivBytes = generateRandomIV();
+//            byte[] ivBytes = generateRandomIV();
             KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
             keyGenerator.init(256);
             SecretKey secretKey = keyGenerator.generateKey();
@@ -268,26 +343,43 @@ public class ProfileScreenController implements Initializable {
            String fileExtension = ExtensionUtil.getExtension(encryptedFile);
            //  Insert data to secrets Table
             // Initialize the AES cipher for encryption
-            Cipher encryptCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-            encryptCipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(ivBytes));
+            Cipher encryptCipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+            encryptCipher.init(Cipher.ENCRYPT_MODE, secretKey
+//                    ,new IvParameterSpec(ivBytes)
+            );
 
-            FileInputStream inputStream = new FileInputStream(browsedFile);
-            FileOutputStream outputStream = new FileOutputStream(encryptedFile);
+            FileInputStream fis= new FileInputStream(browsedFile);
+            FileOutputStream fos = new FileOutputStream(encryptedFile);
             // Did not write IV to the output file
 
-            CipherOutputStream cipherOutputStream = new CipherOutputStream(outputStream, encryptCipher);
-
-            byte[] buffer = new byte[4096];
+//            CipherOutputStream cipherOutputStream = new CipherOutputStream(outputStream, encryptCipher);
+//
+//            byte[] buffer = new byte[4096];
+//            int bytesRead;
+//            while ((bytesRead = inputStream.read(buffer)) != -1) {
+//                cipherOutputStream.write(buffer, 0, bytesRead);
+//            }
+//            cipherOutputStream.close();
+//            inputStream.close();
+//            outputStream.close();
+//            System.out.println("File encrypted successfully.");
+//            //
+            byte[] inputBytes = new byte[8192];
             int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                cipherOutputStream.write(buffer, 0, bytesRead);
+            while ((bytesRead = fis.read(inputBytes)) != -1) {
+                byte[] outputBytes = encryptCipher.update(inputBytes, 0, bytesRead);
+                if (outputBytes != null) {
+                    fos.write(outputBytes);
+                }
+            }
+
+            // Write the final block of encrypted data
+            byte[] finalOutputBytes = encryptCipher.doFinal();
+            if (finalOutputBytes != null) {
+                fos.write(finalOutputBytes);
+                System.out.println("File encrypted successfully using AES.");
             }
             insertToSecretsTable(encryptedFile,keyBytes,fileExtension,folderPath,"AES");
-            cipherOutputStream.close();
-            inputStream.close();
-            outputStream.close();
-            System.out.println("File encrypted successfully.");
-            //
         }catch (Exception e) {
             // add the file to error list for display in Alert
             e.printStackTrace();
@@ -301,7 +393,7 @@ public class ProfileScreenController implements Initializable {
     public void encryptFileUsingTripleDES(File browsedFile, String folderPath){
         try {
             if(browsedFile == null) return;
-            File encryptedFile = new File(folderPath+"/"+browsedFile.getName());
+            File encryptedFile = new File(folderPath+"\\"+browsedFile.getName());
             encryptedFile.createNewFile();
 
             // Generate a random 192-bit (24-byte) secret key
@@ -309,49 +401,58 @@ public class ProfileScreenController implements Initializable {
             byte[] keyData = new byte[24];
             random.nextBytes(keyData);
             SecretKey secretKey = new SecretKeySpec(keyData, "DESede");
+            if(secretKey!=null){
+                System.out.println("Secret key not null");
+            }
+            else{
+                System.out.println("Secret key null");
+            }
             byte[] keyBytes = secretKeyToByteArray(secretKey);
+            if(keyBytes!=null){
+                System.out.println("keyBytesnot null");
+            }
+            else{
+                System.out.println("keyBytes key null");
+            }
             String fileExtension = ExtensionUtil.getExtension(browsedFile);
 
             // Generate an initialization vector (IV)
-            byte[] iv = new byte[8];
-            random.nextBytes(iv);
+//            byte[] iv = new byte[8];
+//            random.nextBytes(iv);
 
             // Initialize the cipher with the key and IV in encryption mode
-            Cipher cipher = Cipher.getInstance("DESede/CBC/PKCS5Padding");
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(iv));
+            Cipher cipher = Cipher.getInstance("DESede/ECB/PKCS5Padding");
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey);
 
             // Create input and output streams
-            FileInputStream inputStream = new FileInputStream(browsedFile);
-            FileOutputStream outputStream = new FileOutputStream(encryptedFile);
+            FileInputStream fis = new FileInputStream(browsedFile);
+            FileOutputStream fos = new FileOutputStream(encryptedFile);
 
-            // Write the IV to the output file
-            outputStream.write(iv);
-
-            // Create a buffer for data encryption
-            byte[] buffer = new byte[8192];
+            byte[] inputBytes = new byte[8192];
             int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                byte[] encryptedBytes = cipher.update(buffer, 0, bytesRead);
-                outputStream.write(encryptedBytes);
+            while ((bytesRead = fis.read(inputBytes)) != -1) {
+                byte[] outputBytes = cipher.update(inputBytes, 0, bytesRead);
+                if (outputBytes != null) {
+                    fos.write(outputBytes);
+                }
             }
 
-            byte[] finalEncryptedBytes = cipher.doFinal();
-            outputStream.write(finalEncryptedBytes);
-
+            // Write the final block of encrypted data
+            byte[] finalOutputBytes = cipher.doFinal();
+            if (finalOutputBytes != null) {
+                fos.write(finalOutputBytes);
+                System.out.println("File encrypted successfully using 3DES.");
+            }
             insertToSecretsTable(encryptedFile,keyBytes,fileExtension,folderPath,"3DES");
-
-            inputStream.close();
-            outputStream.close();
-
-            System.out.println("File encrypted successfully.");
-        } catch (Exception e) {
+        }catch (Exception e) {
+            // add the file to error list for display in Alert
             e.printStackTrace();
         }
     }
     public void encryptFileUsingRSA(File browsedFile, String folderPath){
         try {
-            if(browsedFile == null) return;
-            File encryptedFile = new File(folderPath+"/"+browsedFile.getName());
+
+            File encryptedFile = new File(folderPathLabel.getText()+"\\"+browsedFile.getName());
             encryptedFile.createNewFile();
             // Generate RSA key pair (public and private key)
             KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
@@ -360,32 +461,36 @@ public class ProfileScreenController implements Initializable {
 
             PublicKey publicKey = keyPair.getPublic();
             PrivateKey privateKey = keyPair.getPrivate();
-            byte[] keyBytes ={};
-//            byte[] keyBytes = secretKeyToByteArray(secretKey);
+            byte[] keyBytes = privateKeyToByteArray(privateKey);
             String fileExtension = ExtensionUtil.getExtension(browsedFile);
 
             Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
             cipher.init(Cipher.ENCRYPT_MODE, publicKey);
 
-            FileInputStream inputStream = new FileInputStream(browsedFile);
-            FileOutputStream outputStream = new FileOutputStream(encryptedFile);
-            CipherOutputStream cipherOutputStream = new CipherOutputStream(outputStream, cipher);
-
-            byte[] buffer = new byte[4096];
+            FileInputStream fis = new FileInputStream(browsedFile);
+            FileOutputStream fos = new FileOutputStream(encryptedFile);
+            byte[] inputBytes = new byte[8192];
             int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                cipherOutputStream.write(buffer, 0, bytesRead);
+            while ((bytesRead = fis.read(inputBytes)) != -1) {
+                byte[] outputBytes = cipher.update(inputBytes, 0, bytesRead);
+                if (outputBytes != null) {
+                    fos.write(outputBytes);
+                }
+            }
+
+            // Write the final block of encrypted data
+            byte[] finalOutputBytes = cipher.doFinal();
+            if (finalOutputBytes != null) {
+                fos.write(finalOutputBytes);
+                System.out.println("File encrypted successfully using RSA.");
             }
             insertToSecretsTable(encryptedFile,keyBytes,fileExtension,folderPath,"RSA");
-            cipherOutputStream.close();
-            inputStream.close();
-            outputStream.close();
-
-            System.out.println("File encrypted successfully.");
-        } catch (Exception e) {
-            //
+        }catch (Exception e) {
+            // add the file to error list for display in Alert
             e.printStackTrace();
         }
+
+            System.out.println("File encrypted successfully.");
     }
     TreeView<FileWrapper> selectedItem;
     public void encryptFile() throws IOException {
@@ -424,13 +529,13 @@ public class ProfileScreenController implements Initializable {
     }
     public void encryptFolder(File file, String absolutePath, String algorithm) throws IOException {
         if(file.isDirectory()){
-            Path folder = Paths.get(absolutePath+"/"+file.getName());
+            Path folder = Paths.get(absolutePath+"\\"+file.getName());
             if (!Files.exists(folder)) {
                 Files.createDirectories(folder);
                 File[] children = file.listFiles();
                 if(children != null){
                     for(File child : children){
-                        encryptFolder(child,absolutePath+"/"+file.getName(),algorithm);
+                        encryptFolder(child,absolutePath+"\\"+file.getName(),algorithm);
                     }
                 }
             }
@@ -452,27 +557,39 @@ public class ProfileScreenController implements Initializable {
         // Extract the encoded form of the SecretKey
         return secretKey.getEncoded();
     }
+    public static byte[] privateKeyToByteArray(PrivateKey privateKey) throws Exception {
+        // Get the encoded form of the private key using PKCS8EncodedKeySpec
+        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(privateKey.getEncoded());
+
+        // Use KeyFactory to generate the private key from the encoded key specification
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA"); // Replace "RSA" with your key algorithm
+        PrivateKey reconstructedPrivateKey = keyFactory.generatePrivate(spec);
+
+        // Return the byte array representation of the private key
+        return reconstructedPrivateKey.getEncoded();
+    }
     public static SecretKey byteArrayToAESSecretKey(byte[] keyBytes) {
         // Convert the byte array to a SecretKey using SecretKeySpec
         return new SecretKeySpec(keyBytes, "AES");
     }
-    public static SecretKey byteArrayToDESSecretKey(byte[] keyBytes) {
-        try {
-            // Convert the byte array to a SecretKey using DESKeySpec and SecretKeyFactory
-            KeySpec keySpec = new DESKeySpec(keyBytes);
-            SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("DES");
-            return keyFactory.generateSecret(keySpec);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+    public static SecretKey byteArrayToDESSecretKey(byte[] keyBytes){
+            // Create a DESKeySpec from the byte array
+            return new SecretKeySpec(keyBytes, "DESede");
+    }
+    public static PrivateKey byteArrayToPrivateKey(byte[] privateKeyBytes) throws Exception {
+        // Use KeyFactory to generate the private key from the encoded key specification
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA"); // Replace "RSA" with your key algorithm
+        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(privateKeyBytes);
+        return keyFactory.generatePrivate(spec);
     }
     public void decryptFileUsingAES(File inputFile, byte[] secretKeyByteArray) throws Exception {
         SecretKey key = byteArrayToAESSecretKey(secretKeyByteArray);
         // Initialize the Cipher in decryption mode
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        byte[] ivBytes = readIVFromFile(inputFile);
-        cipher.init(Cipher.DECRYPT_MODE,key,new IvParameterSpec(ivBytes));
+        Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+//        byte[] ivBytes = readIVFromFile(inputFile);
+        cipher.init(Cipher.DECRYPT_MODE,key
+//                ,new IvParameterSpec(ivBytes)
+        );
         FileChooser fileChooser = new FileChooser();
         File outputFile = fileChooser.showSaveDialog(null);
         fileChooser.setTitle("Save File");
@@ -483,15 +600,129 @@ public class ProfileScreenController implements Initializable {
         outputFile.createNewFile();
         // Create a CipherInputStream to read the encrypted file
         try (FileInputStream fis = new FileInputStream(inputFile);
-             CipherInputStream cis = new CipherInputStream(fis, cipher);
+//             CipherInputStream cis = new CipherInputStream(fis, cipher);
              FileOutputStream fos = new FileOutputStream(outputFile)) {
 
-            byte[] buffer = new byte[8192];
+//            byte[] buffer = new byte[8192];
+//            int bytesRead;
+//            while ((bytesRead = cis.read(buffer)) != -1) {
+//                fos.write(buffer, 0, bytesRead);
+//            }
+            byte[] inputBytes = new byte[8192];
             int bytesRead;
-            while ((bytesRead = cis.read(buffer)) != -1) {
-                fos.write(buffer, 0, bytesRead);
+            while ((bytesRead = fis.read(inputBytes)) != -1) {
+                byte[] outputBytes = cipher.update(inputBytes, 0, bytesRead);
+                if (outputBytes != null) {
+                    fos.write(outputBytes);
+                }
+            }
+
+            // Write the final block of decrypted data
+            byte[] finalOutputBytes = cipher.doFinal();
+            if (finalOutputBytes != null) {
+                fos.write(finalOutputBytes);
             }
         }
+        System.out.println("File Decryted Successfully using AES");
+    }
+
+    public void decryptFileUsingTripleDES(File inputFile, byte[] secretKeyByteArray) throws Exception {
+        if(secretKeyByteArray!=null){
+            System.out.println("Secret key ByteArray not null");
+        }
+        else{
+            System.out.println("Secret key  ByteArray null");
+        }
+        SecretKey key = byteArrayToDESSecretKey(secretKeyByteArray);
+        if(key!=null){
+            System.out.println("Secret key not null");
+        }
+        else{
+            System.out.println("Secret key null");
+        }
+        // Initialize the Cipher in decryption mode
+        Cipher cipher = Cipher.getInstance("DESede/ECB/PKCS5Padding");
+//        byte[] ivBytes = readIVFromFile(inputFile);
+        cipher.init(Cipher.DECRYPT_MODE,key
+//                ,new IvParameterSpec(ivBytes)
+        );
+        FileChooser fileChooser = new FileChooser();
+        File outputFile = fileChooser.showSaveDialog(null);
+        fileChooser.setTitle("Save File");
+        if(outputFile == null){
+            System.out.println("File not decrypted!");
+            return;
+        }
+        outputFile.createNewFile();
+        // Create a CipherInputStream to read the encrypted file
+        try (FileInputStream fis = new FileInputStream(inputFile);
+//             CipherInputStream cis = new CipherInputStream(fis, cipher);
+             FileOutputStream fos = new FileOutputStream(outputFile)) {
+
+//            byte[] buffer = new byte[8192];
+//            int bytesRead;
+//            while ((bytesRead = cis.read(buffer)) != -1) {
+//                fos.write(buffer, 0, bytesRead);
+//            }
+            byte[] inputBytes = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = fis.read(inputBytes)) != -1) {
+                byte[] outputBytes = cipher.update(inputBytes, 0, bytesRead);
+                if (outputBytes != null) {
+                    fos.write(outputBytes);
+                }
+            }
+
+            // Write the final block of decrypted data
+            byte[] finalOutputBytes = cipher.doFinal();
+            if (finalOutputBytes != null) {
+                fos.write(finalOutputBytes);
+            }
+        }
+        System.out.println("File Decrypted Successfully using 3DES");
+    }
+    public void decryptFileUsingRSA(File inputFile, byte[] secretKeyByteArray) throws Exception {
+        PrivateKey key = byteArrayToPrivateKey(secretKeyByteArray);
+        // Initialize the Cipher in decryption mode
+        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+//        byte[] ivBytes = readIVFromFile(inputFile);
+        cipher.init(Cipher.DECRYPT_MODE,key
+//                ,new IvParameterSpec(ivBytes)
+        );
+        FileChooser fileChooser = new FileChooser();
+        File outputFile = fileChooser.showSaveDialog(null);
+        fileChooser.setTitle("Save File");
+        if(outputFile == null){
+            System.out.println("File not decrypted!");
+            return;
+        }
+        outputFile.createNewFile();
+        // Create a CipherInputStream to read the encrypted file
+        try (FileInputStream fis = new FileInputStream(inputFile);
+//             CipherInputStream cis = new CipherInputStream(fis, cipher);
+             FileOutputStream fos = new FileOutputStream(outputFile)) {
+
+//            byte[] buffer = new byte[8192];
+//            int bytesRead;
+//            while ((bytesRead = cis.read(buffer)) != -1) {
+//                fos.write(buffer, 0, bytesRead);
+//            }
+            byte[] inputBytes = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = fis.read(inputBytes)) != -1) {
+                byte[] outputBytes = cipher.update(inputBytes, 0, bytesRead);
+                if (outputBytes != null) {
+                    fos.write(outputBytes);
+                }
+            }
+
+            // Write the final block of decrypted data
+            byte[] finalOutputBytes = cipher.doFinal();
+            if (finalOutputBytes != null) {
+                fos.write(finalOutputBytes);
+            }
+        }
+        System.out.println("File Decrypted Successfuly using RSA");
     }
     public static byte[] readIVFromFile(File file) throws Exception {
         // Read the first 16 bytes of the file as the IV
@@ -514,9 +745,25 @@ public class ProfileScreenController implements Initializable {
        if(resultSet.next()) {
            Blob blob = resultSet.getBlob(SecretsTable.COLUMN_FILE_SECRET_KEY);
            int blobLength = (int) blob.length();
-           byte[] fileArray = blob.getBytes(1, blobLength);
+           byte[] decryptKey = blob.getBytes(1, blobLength);
            blob.free();
-           decryptFileUsingAES(file,fileArray);
+
+           PreparedStatement preparedStatement2 = connection.prepareStatement(SecretsTable.FILE_ENCRYPTION_RETRIEVE);
+           preparedStatement2.setString(1, filePath);
+           ResultSet resultSet2 = preparedStatement2.executeQuery();
+           String encryptionAlgo = null;
+           if(resultSet2.next()) {
+               encryptionAlgo = resultSet2.getString(SecretsTable.COLUMN_FILE_ENCRYPTION);
+           }
+
+           if(encryptionAlgo.equals("AES")){
+               decryptFileUsingAES(file,decryptKey);
+           } else if (encryptionAlgo.equals("3DES")) {
+               decryptFileUsingTripleDES(file,decryptKey);
+           }
+           else{
+               decryptFileUsingRSA(file,decryptKey);
+           }
        }
     }
     public void setAlgorithmMenuItems(){
@@ -526,7 +773,7 @@ public class ProfileScreenController implements Initializable {
     @FXML
     private TextField searchField;
 
-//    @FXML
+    //    @FXML
 //    private FlowPane searchResultFlowPane;
     @FXML
     private ListView searchResultListView;
@@ -543,7 +790,7 @@ public class ProfileScreenController implements Initializable {
         searchDelay.setCycleCount(1);
         searchDelay.play();
     }
-//    public void searchButtonClicked(ActionEvent event) {
+    //    public void searchButtonClicked(ActionEvent event) {
 //        performSearch();
 //    }
     @FXML
@@ -613,7 +860,7 @@ public class ProfileScreenController implements Initializable {
         }
         return foundFiles;
     }
-//    @FXML
+    //    @FXML
 //    private ScrollPane treeViewScrollPane;
     @FXML
     private TreeView<FileWrapper> rootFolderTreeView;
@@ -637,7 +884,7 @@ public class ProfileScreenController implements Initializable {
 //        filePathToTreeItemMap.put(filePath,fileTreeItem);
         return new TreeItem[]{fileTreeItem, folderTreeItem};
     }
-//    private TreeItem<FileWrapper> createFolderTreeItem(File file){
+    //    private TreeItem<FileWrapper> createFolderTreeItem(File file){
 //        TreeItem<FileWrapper> fileTreeItem = null;
 //        if (file.isDirectory()) {
 //            fileTreeItem = new TreeItem<>(new FileWrapper(file.getName(),file.getAbsolutePath()));
@@ -674,7 +921,8 @@ public class ProfileScreenController implements Initializable {
 
     public void shareViaWhatsapp(){
         try {
-            assert selectedFile != null;
+            // Checks
+
             // Construct the WhatsApp URL with the file path
             String whatsappUrl = "https://api.whatsapp.com/send?text=&phone=&file=" + selectedFile.toURI().toURL();
 
@@ -768,7 +1016,7 @@ public class ProfileScreenController implements Initializable {
         setFileIconImageViews();
         setAlgoComboBox();
     }
-//    private Map<String,TreeItem<FileWrapper>> filePathToTreeItemMap;
+    //    private Map<String,TreeItem<FileWrapper>> filePathToTreeItemMap;
     public void switchToRootItem(){
         if(rootItem!=null) rootFolderTreeView.setRoot(rootItem);
     }
@@ -791,8 +1039,51 @@ public class ProfileScreenController implements Initializable {
             e.printStackTrace();
         }
     }
+
+
+
     @FXML
     private Tab encryptTab;
     @FXML
     private Tab decryptTab;
+    @FXML
+    private DialogPane verificationDialogPane;
+
+    //to open password authentication dialog pane
+    public void passAction(ActionEvent actionEvent) {
+        try{
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("../fxml/Password.fxml"));
+            System.out.println("passActionCalled");
+            verificationDialogPane = fxmlLoader.load();
+            PasswordController passwordController=fxmlLoader.getController();
+            Dialog<ButtonType> dialog = new Dialog<>();
+            dialog.setDialogPane(verificationDialogPane);
+            dialog.setTitle("Password Authentication");
+            dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+            Optional<ButtonType> clickedButton = dialog.showAndWait();
+            if(clickedButton.get()==ButtonType.OK){
+               if(!passwordController.verifyPassword())
+                   GuiUtil.alert(Alert.AlertType.ERROR,"Renter Password");
+                    dialog.show();
+
+            }
+            else if (clickedButton.get()==ButtonType.CANCEL){
+                System.out.println("cancel");
+            }
+
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        //check
+//        Stage dialogStage = (Stage) encryptButton.getScene().getWindow();
+//        dialog.initOwner(dialogStage);
+//        Region content = null;
+//        try {
+//            content = fxmlLoader.load();
+//        } catch (IOException ex) {
+//            throw new RuntimeException(ex);
+//        }
+    }
 }
