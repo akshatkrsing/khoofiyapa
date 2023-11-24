@@ -3,6 +3,7 @@ package controller;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import main.Main;
 import table.ParamsTable;
@@ -17,13 +18,14 @@ public class PasswordController {
 
     @FXML
     private Button encryptButton;
+    @FXML
+    Label wrongPasswordLabel;
     private Connection connection;
 
 
     //verifying entered password
     @FXML
     private PasswordField passwordVerifyField;
-    private boolean flag=false;
     public boolean verifyPassword() {
         String enteredPassword = passwordVerifyField.getText();
         if(enteredPassword==null) {
@@ -41,12 +43,12 @@ public class PasswordController {
 
             if(resultSet.next()){
                 System.out.println("true");
-                flag=true;
+                return true;
             }
 
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-        return flag;
+        return false;
     }
 }

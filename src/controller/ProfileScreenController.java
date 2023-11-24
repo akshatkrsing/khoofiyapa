@@ -33,6 +33,7 @@ import javafx.util.Duration;
 import main.Main;
 import table.HistoriesTable;
 import table.ParamsTable;
+import table.SecretsTable;
 import util.FileIconUtil;
 import util.GuiUtil;
 import util.HashUtil;
@@ -226,6 +227,12 @@ public class ProfileScreenController implements Initializable {
         Timestamp timeUpdated;
         String action;
         String algo;
+        try{
+            PreparedStatement preparedStatement = connection.prepareStatement(HistoriesTable.QUERY_INSERT_INTO_HISTORIES_TABLE);
+            System.out.println(preparedStatement);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
 
         try {
             PreparedStatement preparedStatement = connection.prepareStatement(HistoriesTable.QUERY_RETRIEVE_FROM_HISTORIES_TABLE);
@@ -233,10 +240,10 @@ public class ProfileScreenController implements Initializable {
         System.out.println(preparedStatement);
         ResultSet resultSet = preparedStatement.executeQuery();
         while (resultSet.next()) {
-            filename = resultSet.getString(HistoriesTable.COLUMN_FILE_NAME);
+            filename = resultSet.getString(SecretsTable.COLUMN_FILE_NAME);
             timeUpdated=resultSet.getTimestamp(HistoriesTable.COLUMN_ACTION_TIME);
             action=resultSet.getString(HistoriesTable.COLUMN_ACTION_TYPE);
-            algo=resultSet.getString(HistoriesTable.COLUMN_ALGO_USED);
+            algo=resultSet.getString(SecretsTable.COLUMN_FILE_ENCRYPTION);
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("../fxml/historyCardFXML.fxml"));
             try {
                 Node node = fxmlLoader.load();
@@ -320,7 +327,7 @@ public class ProfileScreenController implements Initializable {
         try {
             // Generate a random AES key
             if(browsedFile == null) return;
-            File encryptedFile = new File(folderPath+"/"+browsedFile.getName());
+            File encryptedFile = new File(folderPath+"\\"+browsedFile.getName());
             encryptedFile.createNewFile();
             byte[] ivBytes = generateRandomIV();
             KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
@@ -365,7 +372,7 @@ public class ProfileScreenController implements Initializable {
                 GuiUtil.alert(Alert.AlertType.ERROR,"Folder not selected!");
                 return;
             }
-            File encryptedFile = new File(folderPathLabel.getText()+"/"+browsedFile.getName());
+            File encryptedFile = new File(folderPathLabel.getText()+"\\"+browsedFile.getName());
             encryptedFile.createNewFile();
 
             // Generate a random 192-bit (24-byte) secret key
@@ -415,7 +422,7 @@ public class ProfileScreenController implements Initializable {
                 GuiUtil.alert(Alert.AlertType.ERROR,"Folder not selected!");
                 return;
             }
-            File encryptedFile = new File(folderPathLabel.getText()+"/"+browsedFile.getName());
+            File encryptedFile = new File(folderPathLabel.getText()+"\\"+browsedFile.getName());
             encryptedFile.createNewFile();
             // Generate RSA key pair (public and private key)
             KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
@@ -485,13 +492,13 @@ public class ProfileScreenController implements Initializable {
     }
     public void encryptFolder(File file, String absolutePath, String algorithm) throws IOException {
         if(file.isDirectory()){
-            Path folder = Paths.get(absolutePath+"/"+file.getName());
+            Path folder = Paths.get(absolutePath+"\\"+file.getName());
             if (!Files.exists(folder)) {
                 Files.createDirectories(folder);
                 File[] children = file.listFiles();
                 if(children != null){
                     for(File child : children){
-                        encryptFolder(child,absolutePath+"/"+file.getName(),algorithm);
+                        encryptFolder(child,absolutePath+"\\"+file.getName(),algorithm);
                     }
                 }
             }
@@ -725,7 +732,8 @@ public class ProfileScreenController implements Initializable {
 
     public void shareViaWhatsapp(){
         try {
-            assert selectedFile != null;
+            // Checks
+
             // Construct the WhatsApp URL with the file path
             String whatsappUrl = "https://api.whatsapp.com/send?text=&phone=&file=" + selectedFile.toURI().toURL();
 
@@ -836,7 +844,7 @@ public class ProfileScreenController implements Initializable {
     private DialogPane verificationDialogPane;
 
     //to open password authentication dialog pane
-    public void passAction(ActionEvent actionEvent) {
+    private boolean passAction() {
         try{
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("../fxml/Password.fxml"));
             System.out.println("passActionCalled");
@@ -846,22 +854,33 @@ public class ProfileScreenController implements Initializable {
             dialog.setDialogPane(verificationDialogPane);
             dialog.setTitle("Password Authentication");
             dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+            ButtonType okButtonType = dialog.getDialogPane().getButtonTypes().stream()
+                    .filter(buttonType -> buttonType.getButtonData() == ButtonType.OK.getButtonData())
+                    .findFirst()
+                    .orElse(null);
+            dialog.getDialogPane().lookupButton(okButtonType).addEventFilter(javafx.event.ActionEvent.ACTION, event -> {
+                if(!passwordController.verifyPassword()){
+                    passwordController.wrongPasswordLabel.setText("Wrong password!");
+                }
+                else{
+                    dialog.close();
+                }
+                event.consume();
+            });
             Optional<ButtonType> clickedButton = dialog.showAndWait();
-            if(clickedButton.get()==ButtonType.OK){
-               if(!passwordController.verifyPassword())
-                   GuiUtil.alert(Alert.AlertType.ERROR,"Renter Password");
-                    dialog.show();
 
+            if(clickedButton.get()==ButtonType.OK){
+                return true;
             }
-            else if (clickedButton.get()==ButtonType.CANCEL){
+            else{
                 System.out.println("cancel");
+                return false;
             }
 
 
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
         //check
 //        Stage dialogStage = (Stage) encryptButton.getScene().getWindow();
 //        dialog.initOwner(dialogStage);
@@ -872,6 +891,7 @@ public class ProfileScreenController implements Initializable {
 //            throw new RuntimeException(ex);
 //        }
     }
+
     @FXML
     private PasswordField oldPasswordTextField;
     @FXML
@@ -884,28 +904,26 @@ public class ProfileScreenController implements Initializable {
         String oldPassword = oldPasswordTextField.getText();
         String newPassword = newPasswordTextField.getText();
         String confirmedNewPassword = confirmNewPasswordTextField.getText();
-        if(newPassword.equals(confirmedNewPassword)) {
+        if (newPassword.equals(confirmedNewPassword)) {
             try {
-                PreparedStatement preparedStatement=connection.prepareStatement(ParamsTable.QUERY_CHANGE_PASSWORD);
+                PreparedStatement preparedStatement = connection.prepareStatement(ParamsTable.QUERY_CHANGE_PASSWORD);
                 preparedStatement.setString(1, HashUtil.getMd5(newPassword));
-                preparedStatement.setString(2,"password");
+                preparedStatement.setString(2, "password");
                 preparedStatement.setString(3, HashUtil.getMd5(oldPassword));
-                int result= preparedStatement.executeUpdate();
+                int result = preparedStatement.executeUpdate();
 
                 System.out.println("password changed");
-                if(result>0) {
-                    JOptionPane.showMessageDialog(null,"Password changed successfully!");
-                }
-                else {
-                    JOptionPane.showMessageDialog(null,"Some error occurred.");
+                if (result > 0) {
+                    JOptionPane.showMessageDialog(null, "Password changed successfully!");
+                } else {
+                    JOptionPane.showMessageDialog(null, "Some error occurred.");
                 }
 
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
-        }
-        else {
-            JOptionPane.showMessageDialog(null,"New password fields don't match.");
+        } else {
+            JOptionPane.showMessageDialog(null, "New password fields don't match.");
         }
     }
 }
