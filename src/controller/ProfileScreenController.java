@@ -10,6 +10,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
@@ -68,6 +69,7 @@ public class ProfileScreenController implements Initializable {
     public void initialize(URL url, ResourceBundle resourceBundle) {
 
     }
+
     @FXML
     private MenuItem fileMenuItem;
     @FXML
@@ -113,6 +115,10 @@ public class ProfileScreenController implements Initializable {
     public void first() throws SQLException {
         searchField.setPromptText("Enter search term");
         connection = Main.getConnection();
+
+
+
+
         try {
             PreparedStatement preparedStatement = connection.prepareStatement(ParamsTable.QUERY_FETCH_PARAM_VALUE);
             preparedStatement.setString(1, "rootFolderPath");
@@ -122,6 +128,7 @@ public class ProfileScreenController implements Initializable {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
         if (rootFolderPath == null) {
             // Documents directory as default
             rootFolderPath = System.getProperty("user.home") + "\\Documents";
@@ -832,6 +839,44 @@ public class ProfileScreenController implements Initializable {
     private Tab encryptTab;
     @FXML
     private Tab decryptTab;
+    @FXML
+    private DialogPane verificationDialogPane;
+
+    //to open password authentication dialog pane
+    public void passAction(ActionEvent actionEvent) {
+        try{
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("../fxml/Password.fxml"));
+            System.out.println("passActionCalled");
+            verificationDialogPane = fxmlLoader.load();
+            PasswordController passwordController=fxmlLoader.getController();
+            Dialog<ButtonType> dialog = new Dialog<>();
+            dialog.setDialogPane(verificationDialogPane);
+            dialog.setTitle("Password Authentication");
+            dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+            Optional<ButtonType> clickedButton = dialog.showAndWait();
+            if(clickedButton.get()==ButtonType.OK){
+               if(!passwordController.verifyPassword())
+                   GuiUtil.alert(Alert.AlertType.ERROR,"Renter Password");
+                    dialog.show();
+
+            }
+            else if (clickedButton.get()==ButtonType.CANCEL){
+                System.out.println("cancel");
+            }
 
 
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        //check
+//        Stage dialogStage = (Stage) encryptButton.getScene().getWindow();
+//        dialog.initOwner(dialogStage);
+//        Region content = null;
+//        try {
+//            content = fxmlLoader.load();
+//        } catch (IOException ex) {
+//            throw new RuntimeException(ex);
+//        }
+    }
 }
