@@ -14,7 +14,7 @@ import java.sql.SQLException;
 public class Main extends Application {
     private static Connection connection;
     @Override
-    public void start(Stage primaryStage){
+    public void start(Stage primaryStage) throws SQLException {
         System.out.println("Application invoked!");
         FXMLLoader fxmlLoader=new FXMLLoader(getClass().getResource("../fxml/ProfileScreen.fxml"));
         System.out.println("Login FXML Loaded!");
@@ -51,7 +51,9 @@ public class Main extends Application {
             Class.forName("com.mysql.cj.jdbc.Driver");
 
             String url="jdbc:mysql://localhost:3306/ngdb";
-            connection= DriverManager.getConnection(url,"root","XZMeE2M3v-Jno9P");
+
+            connection= DriverManager.getConnection(url,"root","@Abhiveer18");
+
 
             System.out.println("Database connected!!");
         } catch (ClassNotFoundException | SQLException e) {

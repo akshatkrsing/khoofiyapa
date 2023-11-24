@@ -1,5 +1,6 @@
 package controller;
 
+import com.sun.javafx.scene.control.SelectedCellsMap;
 import entity.FileWrapper;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -9,9 +10,11 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Dialog;
@@ -23,11 +26,14 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+
 import main.Main;
+import table.HistoriesTable;
 import table.ParamsTable;
 import util.FileIconUtil;
 import util.GuiUtil;
@@ -50,15 +56,20 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.*;
 import java.util.List;
 
 public class ProfileScreenController implements Initializable {
 
+
+
+
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
 
     }
+
     @FXML
     private MenuItem fileMenuItem;
     @FXML
@@ -85,26 +96,44 @@ public class ProfileScreenController implements Initializable {
     private CheckMenuItem customCheckMenuItem;
     @FXML
     private CheckMenuItem generatedCheckMenuItem;
+    @FXML
+    private VBox historyContainer;
+    @FXML
+    private Label fileNameLabel;
+    @FXML
+    private Label historyAlgoLabel;
+    @FXML
+    private Label timeStampLabel;
+    @FXML
+    private Label  actionLabel;
+
+
     String rootFolderPath;
     private BooleanProperty listViewVisible;
     private Connection connection;
-    public void first(){
+
+    public void first() throws SQLException {
         searchField.setPromptText("Enter search term");
         connection = Main.getConnection();
+
+
+
+
         try {
             PreparedStatement preparedStatement = connection.prepareStatement(ParamsTable.QUERY_FETCH_PARAM_VALUE);
-            preparedStatement.setString(1,"rootFolderPath");
+            preparedStatement.setString(1, "rootFolderPath");
             ResultSet resultSet = preparedStatement.executeQuery();
             resultSet.next();
             rootFolderPath = resultSet.getString(ParamsTable.COLUMN_PARAM_VALUE);
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        if(rootFolderPath == null){
+
+        if (rootFolderPath == null) {
             // Documents directory as default
             rootFolderPath = System.getProperty("user.home") + "\\Documents";
             System.out.println("Document Directory: " + rootFolderPath);
-            FXMLLoader fxmlLoader=new FXMLLoader(getClass().getResource("../fxml/setRootPathDialogFXML.fxml"));
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("../fxml/setRootPathDialogFXML.fxml"));
             // open dialog
             Dialog<ButtonType> dialog = new Dialog<>();
             dialog.setTitle("Custom Dialog");
@@ -117,7 +146,7 @@ public class ProfileScreenController implements Initializable {
                 System.out.println("Exception in ProfileScreenController while loading dialog region!");
                 e.printStackTrace();
             }
-            dialog.getDialogPane().getButtonTypes().addAll(ButtonType.APPLY,ButtonType.OK,ButtonType.CANCEL);
+            dialog.getDialogPane().getButtonTypes().addAll(ButtonType.APPLY, ButtonType.OK, ButtonType.CANCEL);
             dialog.getDialogPane().setContent(content);
             SetRootPathDialogController setRootPathDialogController = fxmlLoader.getController();
             setRootPathDialogController.first();
@@ -162,7 +191,7 @@ public class ProfileScreenController implements Initializable {
         });
 //        listViewToggleButton.setDisable(true);
         searchResultListView.setOnKeyPressed(event -> {
-            if (event.getCode() == KeyCode.DOWN  && searchResultListView.getSelectionModel().getSelectedItem() != null) {
+            if (event.getCode() == KeyCode.DOWN && searchResultListView.getSelectionModel().getSelectedItem() != null) {
                 searchField.setText(searchResultListView.getSelectionModel().getSelectedItem().toString());
 
                 int selectedIndex = searchResultListView.getSelectionModel().getSelectedIndex();
@@ -171,8 +200,7 @@ public class ProfileScreenController implements Initializable {
                     searchResultListView.getSelectionModel().select(selectedIndex + 1);
                     searchResultListView.scrollTo(selectedIndex + 1);
                 }
-            }
-            else if(event.getCode() == KeyCode.ENTER && searchResultListView.getSelectionModel().getSelectedItem() != null){
+            } else if (event.getCode() == KeyCode.ENTER && searchResultListView.getSelectionModel().getSelectedItem() != null) {
                 //
             }
         });
@@ -193,12 +221,54 @@ public class ProfileScreenController implements Initializable {
         //
         algoComboBox.setOnAction(event -> {
             // Update the Label text when a new item is selected
-            if(algorithms != null){
+            if (algorithms != null) {
                 String selectedItem = (String) algoComboBox.getSelectionModel().getSelectedItem();
                 algorithms[browsedFileIndex] = selectedItem;
             }
         });
         fillAlgoComboBox();
+
+        //history
+        String filename = null;
+        Timestamp timeUpdated;
+        String action;
+        String algo;
+
+        try {
+            PreparedStatement preparedStatement = connection.prepareStatement(HistoriesTable.QUERY_RETRIEVE_FROM_HISTORIES_TABLE);
+
+        System.out.println(preparedStatement);
+        ResultSet resultSet = preparedStatement.executeQuery();
+        while (resultSet.next()) {
+            filename = resultSet.getString(HistoriesTable.COLUMN_FILE_NAME);
+            timeUpdated=resultSet.getTimestamp(HistoriesTable.COLUMN_ACTION_TIME);
+            action=resultSet.getString(HistoriesTable.COLUMN_ACTION_TYPE);
+            algo=resultSet.getString(HistoriesTable.COLUMN_ALGO_USED);
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("../fxml/historyCardFXML.fxml"));
+            try {
+                Node node = fxmlLoader.load();
+                ProfileScreenController historyCardLayoutController = fxmlLoader.getController();
+
+                historyCardLayoutController.fileNameLabel.setText(filename);
+                historyCardLayoutController.timeStampLabel.setText(timeUpdated.toString());
+                historyCardLayoutController.actionLabel.setText(action);
+                historyCardLayoutController.historyAlgoLabel.setText(algo);
+
+                historyContainer.getChildren().add(node);
+
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }
+    }
+        catch (SQLException e){
+            e.printStackTrace();
+        }
+
+
+
     }
     @FXML
     private ProgressIndicator treeViewProgress;
@@ -514,7 +584,7 @@ public class ProfileScreenController implements Initializable {
     @FXML
     private TextField searchField;
 
-//    @FXML
+    //    @FXML
 //    private FlowPane searchResultFlowPane;
     @FXML
     private ListView searchResultListView;
@@ -531,7 +601,7 @@ public class ProfileScreenController implements Initializable {
         searchDelay.setCycleCount(1);
         searchDelay.play();
     }
-//    public void searchButtonClicked(ActionEvent event) {
+    //    public void searchButtonClicked(ActionEvent event) {
 //        performSearch();
 //    }
     @FXML
@@ -601,7 +671,7 @@ public class ProfileScreenController implements Initializable {
         }
         return foundFiles;
     }
-//    @FXML
+    //    @FXML
 //    private ScrollPane treeViewScrollPane;
     @FXML
     private TreeView<FileWrapper> rootFolderTreeView;
@@ -625,7 +695,7 @@ public class ProfileScreenController implements Initializable {
 //        filePathToTreeItemMap.put(filePath,fileTreeItem);
         return new TreeItem[]{fileTreeItem, folderTreeItem};
     }
-//    private TreeItem<FileWrapper> createFolderTreeItem(File file){
+    //    private TreeItem<FileWrapper> createFolderTreeItem(File file){
 //        TreeItem<FileWrapper> fileTreeItem = null;
 //        if (file.isDirectory()) {
 //            fileTreeItem = new TreeItem<>(new FileWrapper(file.getName(),file.getAbsolutePath()));
@@ -756,15 +826,58 @@ public class ProfileScreenController implements Initializable {
         setFileIconImageViews();
         setAlgoComboBox();
     }
-//    private Map<String,TreeItem<FileWrapper>> filePathToTreeItemMap;
+    //    private Map<String,TreeItem<FileWrapper>> filePathToTreeItemMap;
     public void switchToRootItem(){
         if(rootItem!=null) rootFolderTreeView.setRoot(rootItem);
     }
     public void switchToFolderItem(){
         if(folderItem!=null) rootFolderTreeView.setRoot(folderItem);
     }
+
+
+
     @FXML
     private Tab encryptTab;
     @FXML
     private Tab decryptTab;
+    @FXML
+    private DialogPane verificationDialogPane;
+
+    //to open password authentication dialog pane
+    public void passAction(ActionEvent actionEvent) {
+        try{
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("../fxml/Password.fxml"));
+            System.out.println("passActionCalled");
+            verificationDialogPane = fxmlLoader.load();
+            PasswordController passwordController=fxmlLoader.getController();
+            Dialog<ButtonType> dialog = new Dialog<>();
+            dialog.setDialogPane(verificationDialogPane);
+            dialog.setTitle("Password Authentication");
+            dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+            Optional<ButtonType> clickedButton = dialog.showAndWait();
+            if(clickedButton.get()==ButtonType.OK){
+               if(!passwordController.verifyPassword())
+                   GuiUtil.alert(Alert.AlertType.ERROR,"Renter Password");
+                    dialog.show();
+
+            }
+            else if (clickedButton.get()==ButtonType.CANCEL){
+                System.out.println("cancel");
+            }
+
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        //check
+//        Stage dialogStage = (Stage) encryptButton.getScene().getWindow();
+//        dialog.initOwner(dialogStage);
+//        Region content = null;
+//        try {
+//            content = fxmlLoader.load();
+//        } catch (IOException ex) {
+//            throw new RuntimeException(ex);
+//        }
+    }
 }
