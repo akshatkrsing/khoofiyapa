@@ -34,6 +34,7 @@ import main.Main;
 import table.HistoriesTable;
 import table.ParamsTable;
 import table.SecretsTable;
+import util.ExtensionUtil;
 import util.FileIconUtil;
 import util.GuiUtil;
 import util.HashUtil;
@@ -53,13 +54,24 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.*;
+import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.*;
 import java.util.List;
 import java.util.*;
 
 public class ProfileScreenController implements Initializable {
+
+
+    public ProfileScreenController() throws NoSuchAlgorithmException {
+    }
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
@@ -330,32 +342,52 @@ public class ProfileScreenController implements Initializable {
             if(browsedFile == null) return;
             File encryptedFile = new File(folderPath+"\\"+browsedFile.getName());
             encryptedFile.createNewFile();
-            byte[] ivBytes = generateRandomIV();
+//            byte[] ivBytes = generateRandomIV();
             KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
             keyGenerator.init(256);
             SecretKey secretKey = keyGenerator.generateKey();
             System.out.println("Secret key: "+secretKey);
+           byte[] keyBytes = secretKeyToByteArray(secretKey);
+           String fileExtension = ExtensionUtil.getExtension(encryptedFile);
+           //  Insert data to secrets Table
             // Initialize the AES cipher for encryption
-            Cipher encryptCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-            encryptCipher.init(Cipher.ENCRYPT_MODE, secretKey, new IvParameterSpec(ivBytes));
+            Cipher encryptCipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+            encryptCipher.init(Cipher.ENCRYPT_MODE, secretKey
+//                    ,new IvParameterSpec(ivBytes)
+            );
 
-            FileInputStream inputStream = new FileInputStream(browsedFile);
-            FileOutputStream outputStream = new FileOutputStream(encryptedFile);
+            FileInputStream fis= new FileInputStream(browsedFile);
+            FileOutputStream fos = new FileOutputStream(encryptedFile);
             // Did not write IV to the output file
 
-            CipherOutputStream cipherOutputStream = new CipherOutputStream(outputStream, encryptCipher);
-
-            byte[] buffer = new byte[4096];
+//            CipherOutputStream cipherOutputStream = new CipherOutputStream(outputStream, encryptCipher);
+//
+//            byte[] buffer = new byte[4096];
+//            int bytesRead;
+//            while ((bytesRead = inputStream.read(buffer)) != -1) {
+//                cipherOutputStream.write(buffer, 0, bytesRead);
+//            }
+//            cipherOutputStream.close();
+//            inputStream.close();
+//            outputStream.close();
+//            System.out.println("File encrypted successfully.");
+//            //
+            byte[] inputBytes = new byte[8192];
             int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                cipherOutputStream.write(buffer, 0, bytesRead);
+            while ((bytesRead = fis.read(inputBytes)) != -1) {
+                byte[] outputBytes = encryptCipher.update(inputBytes, 0, bytesRead);
+                if (outputBytes != null) {
+                    fos.write(outputBytes);
+                }
             }
 
-            cipherOutputStream.close();
-            inputStream.close();
-            outputStream.close();
-            System.out.println("File encrypted successfully.");
-            //
+            // Write the final block of encrypted data
+            byte[] finalOutputBytes = encryptCipher.doFinal();
+            if (finalOutputBytes != null) {
+                fos.write(finalOutputBytes);
+                System.out.println("File encrypted successfully using AES.");
+            }
+            insertToSecretsTable(encryptedFile,keyBytes,fileExtension,folderPath,"AES");
         }catch (Exception e) {
             // add the file to error list for display in Alert
             e.printStackTrace();
@@ -366,63 +398,68 @@ public class ProfileScreenController implements Initializable {
         new SecureRandom().nextBytes(iv);
         return iv;
     }
-    public void encryptFileUsingTripleDES(File browsedFile){
+    public void encryptFileUsingTripleDES(File browsedFile, String folderPath){
         try {
-            assert browsedFile != null;
-            if(folderPathLabel.getText().equals("")){
-                GuiUtil.alert(Alert.AlertType.ERROR,"Folder not selected!");
-                return;
-            }
-            File encryptedFile = new File(folderPathLabel.getText()+"\\"+browsedFile.getName());
+            if(browsedFile == null) return;
+            File encryptedFile = new File(folderPath+"\\"+browsedFile.getName());
             encryptedFile.createNewFile();
 
             // Generate a random 192-bit (24-byte) secret key
             SecureRandom random = new SecureRandom();
             byte[] keyData = new byte[24];
             random.nextBytes(keyData);
-            SecretKey key = new SecretKeySpec(keyData, "DESede");
+            SecretKey secretKey = new SecretKeySpec(keyData, "DESede");
+            if(secretKey!=null){
+                System.out.println("Secret key not null");
+            }
+            else{
+                System.out.println("Secret key null");
+            }
+            byte[] keyBytes = secretKeyToByteArray(secretKey);
+            if(keyBytes!=null){
+                System.out.println("keyBytesnot null");
+            }
+            else{
+                System.out.println("keyBytes key null");
+            }
+            String fileExtension = ExtensionUtil.getExtension(browsedFile);
 
             // Generate an initialization vector (IV)
-            byte[] iv = new byte[8];
-            random.nextBytes(iv);
+//            byte[] iv = new byte[8];
+//            random.nextBytes(iv);
 
             // Initialize the cipher with the key and IV in encryption mode
-            Cipher cipher = Cipher.getInstance("DESede/CBC/PKCS5Padding");
-            cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(iv));
+            Cipher cipher = Cipher.getInstance("DESede/ECB/PKCS5Padding");
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey);
 
             // Create input and output streams
-            FileInputStream inputStream = new FileInputStream(browsedFile);
-            FileOutputStream outputStream = new FileOutputStream(encryptedFile);
+            FileInputStream fis = new FileInputStream(browsedFile);
+            FileOutputStream fos = new FileOutputStream(encryptedFile);
 
-            // Write the IV to the output file
-            outputStream.write(iv);
-
-            // Create a buffer for data encryption
-            byte[] buffer = new byte[8192];
+            byte[] inputBytes = new byte[8192];
             int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                byte[] encryptedBytes = cipher.update(buffer, 0, bytesRead);
-                outputStream.write(encryptedBytes);
+            while ((bytesRead = fis.read(inputBytes)) != -1) {
+                byte[] outputBytes = cipher.update(inputBytes, 0, bytesRead);
+                if (outputBytes != null) {
+                    fos.write(outputBytes);
+                }
             }
 
-            byte[] finalEncryptedBytes = cipher.doFinal();
-            outputStream.write(finalEncryptedBytes);
-
-            inputStream.close();
-            outputStream.close();
-
-            System.out.println("File encrypted successfully.");
-        } catch (Exception e) {
+            // Write the final block of encrypted data
+            byte[] finalOutputBytes = cipher.doFinal();
+            if (finalOutputBytes != null) {
+                fos.write(finalOutputBytes);
+                System.out.println("File encrypted successfully using 3DES.");
+            }
+            insertToSecretsTable(encryptedFile,keyBytes,fileExtension,folderPath,"3DES");
+        }catch (Exception e) {
+            // add the file to error list for display in Alert
             e.printStackTrace();
         }
     }
-    public void encryptFileUsingRSA(File browsedFile){
+    public void encryptFileUsingRSA(File browsedFile, String folderPath){
         try {
-            assert browsedFile != null;
-            if(folderPathLabel.getText().equals("")){
-                GuiUtil.alert(Alert.AlertType.ERROR,"Folder not selected!");
-                return;
-            }
+
             File encryptedFile = new File(folderPathLabel.getText()+"\\"+browsedFile.getName());
             encryptedFile.createNewFile();
             // Generate RSA key pair (public and private key)
@@ -432,29 +469,36 @@ public class ProfileScreenController implements Initializable {
 
             PublicKey publicKey = keyPair.getPublic();
             PrivateKey privateKey = keyPair.getPrivate();
+            byte[] keyBytes = privateKeyToByteArray(privateKey);
+            String fileExtension = ExtensionUtil.getExtension(browsedFile);
 
             Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
             cipher.init(Cipher.ENCRYPT_MODE, publicKey);
 
-            FileInputStream inputStream = new FileInputStream(browsedFile);
-            FileOutputStream outputStream = new FileOutputStream(encryptedFile);
-            CipherOutputStream cipherOutputStream = new CipherOutputStream(outputStream, cipher);
-
-            byte[] buffer = new byte[4096];
+            FileInputStream fis = new FileInputStream(browsedFile);
+            FileOutputStream fos = new FileOutputStream(encryptedFile);
+            byte[] inputBytes = new byte[8192];
             int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                cipherOutputStream.write(buffer, 0, bytesRead);
+            while ((bytesRead = fis.read(inputBytes)) != -1) {
+                byte[] outputBytes = cipher.update(inputBytes, 0, bytesRead);
+                if (outputBytes != null) {
+                    fos.write(outputBytes);
+                }
             }
 
-            cipherOutputStream.close();
-            inputStream.close();
-            outputStream.close();
-
-            System.out.println("File encrypted successfully.");
-        } catch (Exception e) {
-            //
+            // Write the final block of encrypted data
+            byte[] finalOutputBytes = cipher.doFinal();
+            if (finalOutputBytes != null) {
+                fos.write(finalOutputBytes);
+                System.out.println("File encrypted successfully using RSA.");
+            }
+            insertToSecretsTable(encryptedFile,keyBytes,fileExtension,folderPath,"RSA");
+        }catch (Exception e) {
+            // add the file to error list for display in Alert
             e.printStackTrace();
         }
+
+            System.out.println("File encrypted successfully.");
     }
     TreeView<FileWrapper> selectedItem;
     public void encryptFile() throws IOException {
@@ -472,10 +516,10 @@ public class ProfileScreenController implements Initializable {
                         encryptFileUsingAES(browsedFiles.get(fileIndex), folderPathLabel.getText());
                     }
                     else if(algorithms[fileIndex].equals("3DES")){
-
+                        encryptFileUsingTripleDES(browsedFiles.get(fileIndex), folderPathLabel.getText());
                     }
                     else if(algorithms[fileIndex].equals("RSA")){
-
+                        encryptFileUsingRSA(browsedFiles.get(fileIndex), folderPathLabel.getText());
                     }
                 }
             }
@@ -509,10 +553,10 @@ public class ProfileScreenController implements Initializable {
                 encryptFileUsingAES(file,absolutePath);
             }
             else if(algorithm.equals("3DES")){
-
+                encryptFileUsingTripleDES(file,absolutePath);
             }
             else if(algorithm.equals("RSA")){
-
+                encryptFileUsingRSA(file,absolutePath);
             }
         }
     }
@@ -521,27 +565,39 @@ public class ProfileScreenController implements Initializable {
         // Extract the encoded form of the SecretKey
         return secretKey.getEncoded();
     }
+    public static byte[] privateKeyToByteArray(PrivateKey privateKey) throws Exception {
+        // Get the encoded form of the private key using PKCS8EncodedKeySpec
+        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(privateKey.getEncoded());
+
+        // Use KeyFactory to generate the private key from the encoded key specification
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA"); // Replace "RSA" with your key algorithm
+        PrivateKey reconstructedPrivateKey = keyFactory.generatePrivate(spec);
+
+        // Return the byte array representation of the private key
+        return reconstructedPrivateKey.getEncoded();
+    }
     public static SecretKey byteArrayToAESSecretKey(byte[] keyBytes) {
         // Convert the byte array to a SecretKey using SecretKeySpec
         return new SecretKeySpec(keyBytes, "AES");
     }
-    public static SecretKey byteArrayToDESSecretKey(byte[] keyBytes) {
-        try {
-            // Convert the byte array to a SecretKey using DESKeySpec and SecretKeyFactory
-            KeySpec keySpec = new DESKeySpec(keyBytes);
-            SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("DES");
-            return keyFactory.generateSecret(keySpec);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+    public static SecretKey byteArrayToDESSecretKey(byte[] keyBytes){
+            // Create a DESKeySpec from the byte array
+            return new SecretKeySpec(keyBytes, "DESede");
+    }
+    public static PrivateKey byteArrayToPrivateKey(byte[] privateKeyBytes) throws Exception {
+        // Use KeyFactory to generate the private key from the encoded key specification
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA"); // Replace "RSA" with your key algorithm
+        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(privateKeyBytes);
+        return keyFactory.generatePrivate(spec);
     }
     public void decryptFileUsingAES(File inputFile, byte[] secretKeyByteArray) throws Exception {
         SecretKey key = byteArrayToAESSecretKey(secretKeyByteArray);
         // Initialize the Cipher in decryption mode
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        byte[] ivBytes = readIVFromFile(inputFile);
-        cipher.init(Cipher.DECRYPT_MODE,key,new IvParameterSpec(ivBytes));
+        Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+//        byte[] ivBytes = readIVFromFile(inputFile);
+        cipher.init(Cipher.DECRYPT_MODE,key
+//                ,new IvParameterSpec(ivBytes)
+        );
         FileChooser fileChooser = new FileChooser();
         File outputFile = fileChooser.showSaveDialog(null);
         fileChooser.setTitle("Save File");
@@ -552,15 +608,129 @@ public class ProfileScreenController implements Initializable {
         outputFile.createNewFile();
         // Create a CipherInputStream to read the encrypted file
         try (FileInputStream fis = new FileInputStream(inputFile);
-             CipherInputStream cis = new CipherInputStream(fis, cipher);
+//             CipherInputStream cis = new CipherInputStream(fis, cipher);
              FileOutputStream fos = new FileOutputStream(outputFile)) {
 
-            byte[] buffer = new byte[8192];
+//            byte[] buffer = new byte[8192];
+//            int bytesRead;
+//            while ((bytesRead = cis.read(buffer)) != -1) {
+//                fos.write(buffer, 0, bytesRead);
+//            }
+            byte[] inputBytes = new byte[8192];
             int bytesRead;
-            while ((bytesRead = cis.read(buffer)) != -1) {
-                fos.write(buffer, 0, bytesRead);
+            while ((bytesRead = fis.read(inputBytes)) != -1) {
+                byte[] outputBytes = cipher.update(inputBytes, 0, bytesRead);
+                if (outputBytes != null) {
+                    fos.write(outputBytes);
+                }
+            }
+
+            // Write the final block of decrypted data
+            byte[] finalOutputBytes = cipher.doFinal();
+            if (finalOutputBytes != null) {
+                fos.write(finalOutputBytes);
             }
         }
+        System.out.println("File Decryted Successfully using AES");
+    }
+
+    public void decryptFileUsingTripleDES(File inputFile, byte[] secretKeyByteArray) throws Exception {
+        if(secretKeyByteArray!=null){
+            System.out.println("Secret key ByteArray not null");
+        }
+        else{
+            System.out.println("Secret key  ByteArray null");
+        }
+        SecretKey key = byteArrayToDESSecretKey(secretKeyByteArray);
+        if(key!=null){
+            System.out.println("Secret key not null");
+        }
+        else{
+            System.out.println("Secret key null");
+        }
+        // Initialize the Cipher in decryption mode
+        Cipher cipher = Cipher.getInstance("DESede/ECB/PKCS5Padding");
+//        byte[] ivBytes = readIVFromFile(inputFile);
+        cipher.init(Cipher.DECRYPT_MODE,key
+//                ,new IvParameterSpec(ivBytes)
+        );
+        FileChooser fileChooser = new FileChooser();
+        File outputFile = fileChooser.showSaveDialog(null);
+        fileChooser.setTitle("Save File");
+        if(outputFile == null){
+            System.out.println("File not decrypted!");
+            return;
+        }
+        outputFile.createNewFile();
+        // Create a CipherInputStream to read the encrypted file
+        try (FileInputStream fis = new FileInputStream(inputFile);
+//             CipherInputStream cis = new CipherInputStream(fis, cipher);
+             FileOutputStream fos = new FileOutputStream(outputFile)) {
+
+//            byte[] buffer = new byte[8192];
+//            int bytesRead;
+//            while ((bytesRead = cis.read(buffer)) != -1) {
+//                fos.write(buffer, 0, bytesRead);
+//            }
+            byte[] inputBytes = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = fis.read(inputBytes)) != -1) {
+                byte[] outputBytes = cipher.update(inputBytes, 0, bytesRead);
+                if (outputBytes != null) {
+                    fos.write(outputBytes);
+                }
+            }
+
+            // Write the final block of decrypted data
+            byte[] finalOutputBytes = cipher.doFinal();
+            if (finalOutputBytes != null) {
+                fos.write(finalOutputBytes);
+            }
+        }
+        System.out.println("File Decrypted Successfully using 3DES");
+    }
+    public void decryptFileUsingRSA(File inputFile, byte[] secretKeyByteArray) throws Exception {
+        PrivateKey key = byteArrayToPrivateKey(secretKeyByteArray);
+        // Initialize the Cipher in decryption mode
+        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+//        byte[] ivBytes = readIVFromFile(inputFile);
+        cipher.init(Cipher.DECRYPT_MODE,key
+//                ,new IvParameterSpec(ivBytes)
+        );
+        FileChooser fileChooser = new FileChooser();
+        File outputFile = fileChooser.showSaveDialog(null);
+        fileChooser.setTitle("Save File");
+        if(outputFile == null){
+            System.out.println("File not decrypted!");
+            return;
+        }
+        outputFile.createNewFile();
+        // Create a CipherInputStream to read the encrypted file
+        try (FileInputStream fis = new FileInputStream(inputFile);
+//             CipherInputStream cis = new CipherInputStream(fis, cipher);
+             FileOutputStream fos = new FileOutputStream(outputFile)) {
+
+//            byte[] buffer = new byte[8192];
+//            int bytesRead;
+//            while ((bytesRead = cis.read(buffer)) != -1) {
+//                fos.write(buffer, 0, bytesRead);
+//            }
+            byte[] inputBytes = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = fis.read(inputBytes)) != -1) {
+                byte[] outputBytes = cipher.update(inputBytes, 0, bytesRead);
+                if (outputBytes != null) {
+                    fos.write(outputBytes);
+                }
+            }
+
+            // Write the final block of decrypted data
+            byte[] finalOutputBytes = cipher.doFinal();
+            if (finalOutputBytes != null) {
+                fos.write(finalOutputBytes);
+            }
+        }
+        System.out.println("File Decrypted Successfuly using RSA");
     }
     public static byte[] readIVFromFile(File file) throws Exception {
         // Read the first 16 bytes of the file as the IV
@@ -576,8 +746,33 @@ public class ProfileScreenController implements Initializable {
     private Label encryptedFileLabel;
     public void decryptFile() throws Exception {
         File file = new File(encryptedFileLabel.getText());
+        String filePath = encryptedFileLabel.getText();
+        PreparedStatement preparedStatement = connection.prepareStatement(SecretsTable.KEY_RETRIEVE);
+        preparedStatement.setString(1, filePath);
+       ResultSet resultSet = preparedStatement.executeQuery();
+       if(resultSet.next()) {
+           Blob blob = resultSet.getBlob(SecretsTable.COLUMN_FILE_SECRET_KEY);
+           int blobLength = (int) blob.length();
+           byte[] decryptKey = blob.getBytes(1, blobLength);
+           blob.free();
 
-        decryptFileUsingAES(file,null);
+           PreparedStatement preparedStatement2 = connection.prepareStatement(SecretsTable.FILE_ENCRYPTION_RETRIEVE);
+           preparedStatement2.setString(1, filePath);
+           ResultSet resultSet2 = preparedStatement2.executeQuery();
+           String encryptionAlgo = null;
+           if(resultSet2.next()) {
+               encryptionAlgo = resultSet2.getString(SecretsTable.COLUMN_FILE_ENCRYPTION);
+           }
+
+           if(encryptionAlgo.equals("AES")){
+               decryptFileUsingAES(file,decryptKey);
+           } else if (encryptionAlgo.equals("3DES")) {
+               decryptFileUsingTripleDES(file,decryptKey);
+           }
+           else{
+               decryptFileUsingRSA(file,decryptKey);
+           }
+       }
     }
     public void setAlgorithmMenuItems(){
 
@@ -845,6 +1040,22 @@ public class ProfileScreenController implements Initializable {
     }
     public void switchToFolderItem(){
         if(folderItem!=null) rootFolderTreeView.setRoot(folderItem);
+    }
+    public void insertToSecretsTable(File browsedFile, byte[] keyBytes,String fileExtension,String folderPath, String encryptionAlgorithm) throws SQLException {
+        try{
+        PreparedStatement preparedStatement = connection.prepareStatement(SecretsTable.QUERY_REGISTER);
+        preparedStatement.setString(1, browsedFile.getName());
+        InputStream fis= new ByteArrayInputStream(keyBytes);
+        preparedStatement.setBlob(2, fis);
+        preparedStatement.setString(3, fileExtension);
+        preparedStatement.setString(4, folderPath + "\\" + browsedFile.getName());
+        preparedStatement.setString(5, encryptionAlgorithm);
+        System.out.println(preparedStatement);
+        preparedStatement.executeUpdate();
+            System.out.println("Key saved in database!");
+        }catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
 
