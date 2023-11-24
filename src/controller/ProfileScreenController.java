@@ -401,19 +401,7 @@ public class ProfileScreenController implements Initializable {
             byte[] keyData = new byte[24];
             random.nextBytes(keyData);
             SecretKey secretKey = new SecretKeySpec(keyData, "DESede");
-            if(secretKey!=null){
-                System.out.println("Secret key not null");
-            }
-            else{
-                System.out.println("Secret key null");
-            }
             byte[] keyBytes = secretKeyToByteArray(secretKey);
-            if(keyBytes!=null){
-                System.out.println("keyBytesnot null");
-            }
-            else{
-                System.out.println("keyBytes key null");
-            }
             String fileExtension = ExtensionUtil.getExtension(browsedFile);
 
             // Generate an initialization vector (IV)
@@ -627,19 +615,7 @@ public class ProfileScreenController implements Initializable {
     }
 
     public void decryptFileUsingTripleDES(File inputFile, byte[] secretKeyByteArray) throws Exception {
-        if(secretKeyByteArray!=null){
-            System.out.println("Secret key ByteArray not null");
-        }
-        else{
-            System.out.println("Secret key  ByteArray null");
-        }
         SecretKey key = byteArrayToDESSecretKey(secretKeyByteArray);
-        if(key!=null){
-            System.out.println("Secret key not null");
-        }
-        else{
-            System.out.println("Secret key null");
-        }
         // Initialize the Cipher in decryption mode
         Cipher cipher = Cipher.getInstance("DESede/ECB/PKCS5Padding");
 //        byte[] ivBytes = readIVFromFile(inputFile);
