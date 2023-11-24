@@ -257,7 +257,7 @@ public class ProfileScreenController implements Initializable {
         try {
             // Generate a random AES key
             if(browsedFile == null) return;
-            File encryptedFile = new File(folderPath+"/"+browsedFile.getName());
+            File encryptedFile = new File(folderPath+"\\"+browsedFile.getName());
             encryptedFile.createNewFile();
             byte[] ivBytes = generateRandomIV();
             KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
@@ -302,7 +302,7 @@ public class ProfileScreenController implements Initializable {
                 GuiUtil.alert(Alert.AlertType.ERROR,"Folder not selected!");
                 return;
             }
-            File encryptedFile = new File(folderPathLabel.getText()+"/"+browsedFile.getName());
+            File encryptedFile = new File(folderPathLabel.getText()+"\\"+browsedFile.getName());
             encryptedFile.createNewFile();
 
             // Generate a random 192-bit (24-byte) secret key
@@ -352,7 +352,7 @@ public class ProfileScreenController implements Initializable {
                 GuiUtil.alert(Alert.AlertType.ERROR,"Folder not selected!");
                 return;
             }
-            File encryptedFile = new File(folderPathLabel.getText()+"/"+browsedFile.getName());
+            File encryptedFile = new File(folderPathLabel.getText()+"\\"+browsedFile.getName());
             encryptedFile.createNewFile();
             // Generate RSA key pair (public and private key)
             KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
@@ -422,13 +422,13 @@ public class ProfileScreenController implements Initializable {
     }
     public void encryptFolder(File file, String absolutePath, String algorithm) throws IOException {
         if(file.isDirectory()){
-            Path folder = Paths.get(absolutePath+"/"+file.getName());
+            Path folder = Paths.get(absolutePath+"\\"+file.getName());
             if (!Files.exists(folder)) {
                 Files.createDirectories(folder);
                 File[] children = file.listFiles();
                 if(children != null){
                     for(File child : children){
-                        encryptFolder(child,absolutePath+"/"+file.getName(),algorithm);
+                        encryptFolder(child,absolutePath+"\\"+file.getName(),algorithm);
                     }
                 }
             }
@@ -662,7 +662,8 @@ public class ProfileScreenController implements Initializable {
 
     public void shareViaWhatsapp(){
         try {
-            assert selectedFile != null;
+            // Checks
+
             // Construct the WhatsApp URL with the file path
             String whatsappUrl = "https://api.whatsapp.com/send?text=&phone=&file=" + selectedFile.toURI().toURL();
 
