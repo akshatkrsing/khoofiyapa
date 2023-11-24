@@ -25,10 +25,7 @@
    <center>
       <VBox prefHeight="200.0" prefWidth="100.0" BorderPane.alignment="CENTER">
          <children>
-            <AnchorPane prefHeight="83.0" prefWidth="804.0">
-               <children>
-                  <Button fx:id="passBT" layoutX="437.0" layoutY="18.0" mnemonicParsing="false" onAction="#passAction" text="PasswordBT" />
-               </children></AnchorPane>
+            <AnchorPane prefHeight="83.0" prefWidth="804.0" />
             <FlowPane prefHeight="441.0" prefWidth="804.0">
                <children>
                   <TabPane prefHeight="416.0" prefWidth="413.0" tabClosingPolicy="UNAVAILABLE">

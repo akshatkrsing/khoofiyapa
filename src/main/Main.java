@@ -54,6 +54,7 @@ public class Main extends Application {
             connection= DriverManager.getConnection(url,"root","Siddh@nt234");
 
 
+
             System.out.println("Database connected!!");
         } catch (ClassNotFoundException | SQLException e) {
             e.printStackTrace();
