@@ -844,7 +844,7 @@ public class ProfileScreenController implements Initializable {
     private DialogPane verificationDialogPane;
 
     //to open password authentication dialog pane
-    public void passAction(ActionEvent actionEvent) {
+    private boolean passAction() {
         try{
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("../fxml/Password.fxml"));
             System.out.println("passActionCalled");
@@ -854,22 +854,33 @@ public class ProfileScreenController implements Initializable {
             dialog.setDialogPane(verificationDialogPane);
             dialog.setTitle("Password Authentication");
             dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+            ButtonType okButtonType = dialog.getDialogPane().getButtonTypes().stream()
+                    .filter(buttonType -> buttonType.getButtonData() == ButtonType.OK.getButtonData())
+                    .findFirst()
+                    .orElse(null);
+            dialog.getDialogPane().lookupButton(okButtonType).addEventFilter(javafx.event.ActionEvent.ACTION, event -> {
+                if(!passwordController.verifyPassword()){
+                    passwordController.wrongPasswordLabel.setText("Wrong password!");
+                }
+                else{
+                    dialog.close();
+                }
+                event.consume();
+            });
             Optional<ButtonType> clickedButton = dialog.showAndWait();
-            if(clickedButton.get()==ButtonType.OK){
-               if(!passwordController.verifyPassword())
-                   GuiUtil.alert(Alert.AlertType.ERROR,"Renter Password");
-                    dialog.show();
 
+            if(clickedButton.get()==ButtonType.OK){
+                return true;
             }
-            else if (clickedButton.get()==ButtonType.CANCEL){
+            else{
                 System.out.println("cancel");
+                return false;
             }
 
 
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
         //check
 //        Stage dialogStage = (Stage) encryptButton.getScene().getWindow();
 //        dialog.initOwner(dialogStage);
@@ -879,5 +890,8 @@ public class ProfileScreenController implements Initializable {
 //        } catch (IOException ex) {
 //            throw new RuntimeException(ex);
 //        }
+    }
+    void storeHistory(){
+
     }
 }

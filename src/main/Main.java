@@ -52,7 +52,7 @@ public class Main extends Application {
 
             String url="jdbc:mysql://localhost:3306/ngdb";
 
-            connection= DriverManager.getConnection(url,"root","@Abhiveer18");
+            connection= DriverManager.getConnection(url,"root","XZMeE2M3v-Jno9P");
 
 
             System.out.println("Database connected!!");
