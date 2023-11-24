@@ -43,6 +43,7 @@ import javax.crypto.spec.DESKeySpec;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.awt.*;
+import java.awt.Menu;
 import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -575,6 +576,7 @@ public class ProfileScreenController implements Initializable {
     private Label encryptedFileLabel;
     public void decryptFile() throws Exception {
         File file = new File(encryptedFileLabel.getText());
+
         decryptFileUsingAES(file,null);
     }
     public void setAlgorithmMenuItems(){
@@ -727,10 +729,19 @@ public class ProfileScreenController implements Initializable {
     @FXML
     private Button shareViaMailButton;
     @FXML
-    private AnchorPane shareOptionAnchorPane;
-    private File selectedFile;
+    private AnchorPane shareOptionAnchorPane;;
 
+    @FXML
+    private MenuItem whatsappShareMenuItem;
+    @FXML
+    private MenuItem gmailShareMenuItem;
     public void shareViaWhatsapp(){
+        if(encryptedFileLabel.getText().equals("")) GuiUtil.alert(Alert.AlertType.ERROR,"No file selected!");
+        File selectedFile = new File(encryptedFileLabel.getText());
+        if(selectedFile.isDirectory()){
+            //
+            return;
+        }
         try {
             // Checks
 
@@ -739,20 +750,22 @@ public class ProfileScreenController implements Initializable {
 
             // Open the default browser with the WhatsApp URL
             Desktop.getDesktop().browse(new URI(whatsappUrl));
-        } catch(URISyntaxException e){
-
-        }
-        catch (IOException e) {
-            e.printStackTrace();
+        } catch(URISyntaxException | IOException e){
+            GuiUtil.alert(Alert.AlertType.ERROR,"Some error occurred!");
         }
     }
     public void shareViaMail(){
+        if(encryptedFileLabel.getText().equals("")) GuiUtil.alert(Alert.AlertType.ERROR,"No file selected!");
+        File selectedFile = new File(encryptedFileLabel.getText());
+        if(selectedFile.isDirectory()){
+            //
+            return;
+        }
         try{
-            assert selectedFile != null;
             Desktop.getDesktop().mail(selectedFile.toURI());
         }
-        catch (AssertionError | IOException e){
-
+        catch (IOException e){
+            GuiUtil.alert(Alert.AlertType.ERROR,"Some error occurred!");
         }
     }
     public void toggleShareOptionAnchorPane(){
@@ -891,7 +904,24 @@ public class ProfileScreenController implements Initializable {
 //            throw new RuntimeException(ex);
 //        }
     }
-    void storeHistory(){
+    private void decryptFolder(File file, String destination) throws IOException {
+        if(file.isDirectory()){
+            Path folder = Paths.get(destination+"\\"+file.getName());
+            if (!Files.exists(folder)) {
+                Files.createDirectories(folder);
+                File[] children = file.listFiles();
+                if(children != null){
+                    for(File child : children){
 
+                    }
+                }
+            }
+        }
+        else{
+
+        }
     }
+    private void storeHistory(){
+    }
+
 }
