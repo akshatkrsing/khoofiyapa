@@ -14,25 +14,10 @@ import java.sql.SQLException;
 public class Main extends Application {
     private static Connection connection;
     @Override
-    public void start(Stage primaryStage) throws SQLException, IOException {
+    public void start(Stage primaryStage) throws IOException {
         System.out.println("Application invoked!");
         FXMLLoader fxmlLoader=new FXMLLoader(getClass().getResource("../fxml/ProfileScreen.fxml"));
         System.out.println("Login FXML Loaded!");
-//        try {
-//            System.out.println("Creating a new connection");
-//            socket=new Socket("localhost",6971);
-//            System.out.println(socket);
-//            oos=new ObjectOutputStream(socket.getOutputStream());
-//            ois=new ObjectInputStream(socket.getInputStream());
-//            System.out.println("Connection established and io streams created");
-
-//            System.out.println(Thread.currentThread());
-//        } catch (IOException e) {
-//            System.out.println("socket connect negative!");
-//            e.printStackTrace();
-//        }
-
-//        primaryStage.setTitle("Sign In");
         try {
             primaryStage.setScene(new Scene(fxmlLoader.load()));
         } catch (IOException e) {

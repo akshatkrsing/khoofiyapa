@@ -2,7 +2,6 @@ package controller;
 
 
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import main.Main;
@@ -15,9 +14,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class PasswordController {
-
-    @FXML
-    private Button encryptButton;
     @FXML
     Label wrongPasswordLabel;
     private Connection connection;

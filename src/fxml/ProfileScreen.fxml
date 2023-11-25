@@ -39,30 +39,8 @@
                                       <menus>
                                         <Menu mnemonicParsing="false" text="File">
                                           <items>
-                                              <Menu mnemonicParsing="false" text="Algorithm">
-                                                <items>
-                                                  <MenuItem fx:id="aesAlgoMenuItem" mnemonicParsing="false" text="AES" />
-                                                      <MenuItem fx:id="desAlgoMenuItem" mnemonicParsing="false" text="3DES" />
-                                                      <MenuItem fx:id="rsaAlgoMenuItem" mnemonicParsing="false" text="RSA" />
-                                                </items>
-                                              </Menu>
                                                 <MenuItem fx:id="refreshMenuItem" mnemonicParsing="false" onAction="#refresh" text="Refresh..." />
-                                                <Menu mnemonicParsing="false" text="Settings">
-                                                  <items>
-                                                      <Menu mnemonicParsing="false" text="Private Key">
-                                                        <items>
-                                                            <CheckMenuItem fx:id="customCheckMenuItem" mnemonicParsing="false" text="Custom..." />
-                                                            <CheckMenuItem fx:id="generatedCheckMenuItem" mnemonicParsing="false" text="Generated..." />
-                                                        </items>
-                                                      </Menu>
-                                                      <MenuItem fx:id="encryptionSettingMenuItem" mnemonicParsing="false" text="Encryption" />
-                                                  </items>
-                                                </Menu>
-                                          </items>
-                                        </Menu>
-                                        <Menu mnemonicParsing="false" text="Help">
-                                          <items>
-                                            <MenuItem mnemonicParsing="false" text="About" />
+                                                <CheckMenuItem fx:id="deleteOriginalFileCheckMenuItem" mnemonicParsing="false" text="Delete Original File" />
                                           </items>
                                         </Menu>
                                       </menus>
@@ -72,8 +50,6 @@
                                           <Font size="10.0" />
                                        </font></Label>
                                     <Button fx:id="encryptButton" layoutX="14.0" layoutY="310.0" mnemonicParsing="false" onAction="#encryptFile" text="Encrypt" />
-                                    <PasswordField fx:id="privateKeyField" layoutX="182.0" layoutY="347.0" />
-                                    <PasswordField fx:id="confirmPrivateKeyField" layoutX="14.0" layoutY="347.0" />
                                     <Button fx:id="browseFilesButton" layoutX="89.0" layoutY="310.0" mnemonicParsing="false" onAction="#openFileChooser" prefHeight="25.0" prefWidth="49.0" text="File" />
                                     <Button fx:id="browseFolderButton" layoutX="157.0" layoutY="310.0" mnemonicParsing="false" onAction="#openFolderChooser" text="Folder" />
                                     <AnchorPane layoutX="61.0" layoutY="26.0" prefHeight="200.0" prefWidth="291.0" style="-fx-background-color: white; -fx-border-color: black;">
