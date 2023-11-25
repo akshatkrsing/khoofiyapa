@@ -17,9 +17,6 @@ import java.sql.SQLException;
 import java.util.ResourceBundle;
 
 public class SetRootPathDialogController implements Initializable {
-
-    private Connection connection;
-
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
 
@@ -34,9 +31,9 @@ public class SetRootPathDialogController implements Initializable {
     private ButtonType applyButtonType;
 
     private String previousRootFolderPathFieldContent;
+    private Connection connection;
     public void first(){
         connection = Main.getConnection();
-//        applyRootFolderPathButton.setDisable(true);
         dialogPane = getCurrentDialogPane(rootFolderBrowseButton);
         applyButtonType = dialogPane.getButtonTypes().stream()
                 .filter(buttonType -> buttonType.getButtonData() == ButtonType.APPLY.getButtonData())
@@ -48,9 +45,7 @@ public class SetRootPathDialogController implements Initializable {
             if (selectedDirectory != null) {
                 System.out.println("Selected Folder: " + selectedDirectory.getAbsolutePath());
                 rootFolderPathField.setText(selectedDirectory.getAbsolutePath());
-                // Handle the selected folder as needed
             } else {
-                //
                 System.out.println("No folder selected");
             }
             if(rootFolderPathField.getText() != previousRootFolderPathFieldContent) {
@@ -60,20 +55,6 @@ public class SetRootPathDialogController implements Initializable {
                 previousRootFolderPathFieldContent = rootFolderPathField.getText();
             }
         });
-//        applyRootFolderPathButton.setOnAction(event -> {
-//            // check if folder exists
-//
-//            profileScreenController.rootFolderPath = rootFolderPathField.getText();
-//            // update param in db
-//
-//            applyRootFolderPathButton.setDisable(true);
-//        });
-//        confirmRootFolderPathButton.setOnAction(event -> {
-//            // create root folder
-//
-//            // close dialog
-//
-//        });
 
 
 
