@@ -14,7 +14,7 @@ import java.sql.SQLException;
 public class Main extends Application {
     private static Connection connection;
     @Override
-    public void start(Stage primaryStage) throws SQLException {
+    public void start(Stage primaryStage) throws SQLException, IOException {
         System.out.println("Application invoked!");
         FXMLLoader fxmlLoader=new FXMLLoader(getClass().getResource("../fxml/ProfileScreen.fxml"));
         System.out.println("Login FXML Loaded!");

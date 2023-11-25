@@ -120,7 +120,7 @@ public class ProfileScreenController implements Initializable {
     private BooleanProperty listViewVisible;
     private Connection connection;
 
-    public void first() throws SQLException {
+    public void first() throws SQLException, IOException {
         searchField.setPromptText("Enter search term");
         connection = Main.getConnection();
 
@@ -138,7 +138,7 @@ public class ProfileScreenController implements Initializable {
         if (rootFolderPath == null) {
 
             // Documents directory as default
-            rootFolderPath = System.getProperty("user.home") + "\\Documents";
+            rootFolderPath = System.getProperty("user.home");
             System.out.println("Document Directory: " + rootFolderPath);
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("../fxml/setRootPathDialogFXML.fxml"));
 
@@ -182,9 +182,18 @@ public class ProfileScreenController implements Initializable {
             // Show the dialog and wait for a response
             Optional<ButtonType> result = dialog.showAndWait();
             // update param in db if not updated yet
-
+            rootFolderPath += "\\Khoofiyapa";
+            try {
+                PreparedStatement preparedStatement = connection.prepareStatement(ParamsTable.QUERY_UPDATE_PARAM_VALUE);
+                preparedStatement.setString(1,rootFolderPath);
+                preparedStatement.setString(2,"rootFolderPath");
+                preparedStatement.executeUpdate();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
             // create folder
-
+            Path folder = Paths.get(rootFolderPath);
+            Files.createDirectories(folder);
         }
         // Set up a short delay to trigger search after typing
         searchDelay.getKeyFrames().add(new KeyFrame(Duration.millis(500), event -> performSearch()));
@@ -208,7 +217,7 @@ public class ProfileScreenController implements Initializable {
                     searchResultListView.scrollTo(selectedIndex + 1);
                 }
             } else if (event.getCode() == KeyCode.ENTER && searchResultListView.getSelectionModel().getSelectedItem() != null) {
-                //
+                encryptedFileLabel.setText(searchResultListView.getSelectionModel().getSelectedItem().toString());
             }
         });
         // use file wrapper
@@ -508,6 +517,7 @@ public class ProfileScreenController implements Initializable {
             GuiUtil.alert(Alert.AlertType.ERROR,"Folder not selected!");
             return;
         }
+        if(!passAction()) return;
         if(browsedFiles.get(browsedFileIndex).isDirectory()){
             encryptFolder(browsedFiles.get(browsedFileIndex),folderPathLabel.getText(),algorithms[browsedFileIndex]);
         }
@@ -752,6 +762,11 @@ public class ProfileScreenController implements Initializable {
     @FXML
     private Label encryptedFileLabel;
     public void decrypt() throws Exception {
+        if(encryptedFileLabel.getText().equals("")){
+            GuiUtil.alert(Alert.AlertType.ERROR,"No file selected!");
+            return;
+        }
+        if(!passAction()) return;
         File file = new File(encryptedFileLabel.getText());
         if(!file.isDirectory()){
             decryptFile(file);
@@ -1149,11 +1164,8 @@ public class ProfileScreenController implements Initializable {
             dialog.getDialogPane().lookupButton(okButtonType).addEventFilter(javafx.event.ActionEvent.ACTION, event -> {
                 if(!passwordController.verifyPassword()){
                     passwordController.wrongPasswordLabel.setText("Wrong password!");
+                    event.consume();
                 }
-                else{
-                    dialog.close();
-                }
-                event.consume();
             });
             Optional<ButtonType> clickedButton = dialog.showAndWait();
 
@@ -1258,5 +1270,18 @@ public class ProfileScreenController implements Initializable {
 
 //        }
     }
-
+    public void deleteFile() throws SQLException, IOException {
+        if(encryptedFileLabel.getText().equals("")){
+            GuiUtil.alert(Alert.AlertType.ERROR,"No file selected!");
+            return;
+        }
+        if(!passAction()) return;
+        File file = new File(encryptedFileLabel.getText());
+        if(file.isDirectory()){
+            GuiUtil.alert(Alert.AlertType.ERROR,"Directory not empty!");
+            return;
+        }
+        Path path = Paths.get(encryptedFileLabel.getText());
+        Files.delete(path);
+    }
 }
