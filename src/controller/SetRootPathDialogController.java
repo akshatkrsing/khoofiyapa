@@ -30,10 +30,6 @@ public class SetRootPathDialogController implements Initializable {
     TextField rootFolderPathField;
     @FXML
     private PasswordField enterPasswordField;
-//    @FXML
-//    private Button applyRootFolderPathButton;
-//    @FXML
-//    private Button confirmRootFolderPathButton;
     private DialogPane dialogPane;
     private ButtonType applyButtonType;
 

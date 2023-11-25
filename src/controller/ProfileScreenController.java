@@ -23,6 +23,7 @@ import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
@@ -355,9 +356,9 @@ public class ProfileScreenController implements Initializable {
             keyGenerator.init(256);
             SecretKey secretKey = keyGenerator.generateKey();
             System.out.println("Secret key: "+secretKey);
-           byte[] keyBytes = secretKeyToByteArray(secretKey);
-           String fileExtension = ExtensionUtil.getExtension(encryptedFile);
-           //  Insert data to secrets Table
+            byte[] keyBytes = secretKeyToByteArray(secretKey);
+            String fileExtension = ExtensionUtil.getExtension(encryptedFile);
+            //  Insert data to secrets Table
             // Initialize the AES cipher for encryption
             Cipher encryptCipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
             encryptCipher.init(Cipher.ENCRYPT_MODE, secretKey
@@ -418,19 +419,7 @@ public class ProfileScreenController implements Initializable {
             byte[] keyData = new byte[24];
             random.nextBytes(keyData);
             SecretKey secretKey = new SecretKeySpec(keyData, "DESede");
-            if(secretKey!=null){
-                System.out.println("Secret key not null");
-            }
-            else{
-                System.out.println("Secret key null");
-            }
             byte[] keyBytes = secretKeyToByteArray(secretKey);
-            if(keyBytes!=null){
-                System.out.println("keyBytesnot null");
-            }
-            else{
-                System.out.println("keyBytes key null");
-            }
             String fileExtension = ExtensionUtil.getExtension(browsedFile);
 
             // Generate an initialization vector (IV)
@@ -509,7 +498,7 @@ public class ProfileScreenController implements Initializable {
             e.printStackTrace();
         }
 
-            System.out.println("File encrypted successfully.");
+        System.out.println("File encrypted successfully.");
     }
     TreeView<FileWrapper> selectedItem;
     public void encryptFile() throws IOException {
@@ -593,8 +582,8 @@ public class ProfileScreenController implements Initializable {
         return new SecretKeySpec(keyBytes, "AES");
     }
     public static SecretKey byteArrayToDESSecretKey(byte[] keyBytes){
-            // Create a DESKeySpec from the byte array
-            return new SecretKeySpec(keyBytes, "DESede");
+        // Create a DESKeySpec from the byte array
+        return new SecretKeySpec(keyBytes, "DESede");
     }
     public static PrivateKey byteArrayToPrivateKey(byte[] privateKeyBytes) throws Exception {
         // Use KeyFactory to generate the private key from the encoded key specification
@@ -649,19 +638,7 @@ public class ProfileScreenController implements Initializable {
     }
 
     public void decryptFileUsingTripleDES(File inputFile, File outputFile, byte[] secretKeyByteArray) throws Exception {
-        if(secretKeyByteArray!=null){
-            System.out.println("Secret key ByteArray not null");
-        }
-        else{
-            System.out.println("Secret key  ByteArray null");
-        }
         SecretKey key = byteArrayToDESSecretKey(secretKeyByteArray);
-        if(key!=null){
-            System.out.println("Secret key not null");
-        }
-        else{
-            System.out.println("Secret key null");
-        }
         // Initialize the Cipher in decryption mode
         Cipher cipher = Cipher.getInstance("DESede/ECB/PKCS5Padding");
 //        byte[] ivBytes = readIVFromFile(inputFile);
@@ -783,13 +760,13 @@ public class ProfileScreenController implements Initializable {
 
         PreparedStatement preparedStatement = connection.prepareStatement(SecretsTable.QUERY_FETCH_KEY);
         preparedStatement.setString(1, filePath);
-       ResultSet resultSet = preparedStatement.executeQuery();
-       if(resultSet.next()) {
-           Blob blob = resultSet.getBlob(SecretsTable.COLUMN_FILE_SECRET_KEY);
-           int blobLength = (int) blob.length();
-           byte[] decryptKey = blob.getBytes(1, blobLength);
-           blob.free();
-           String encryptionAlgo = resultSet.getString(SecretsTable.COLUMN_FILE_ENCRYPTION);
+        ResultSet resultSet = preparedStatement.executeQuery();
+        if(resultSet.next()) {
+            Blob blob = resultSet.getBlob(SecretsTable.COLUMN_FILE_SECRET_KEY);
+            int blobLength = (int) blob.length();
+            byte[] decryptKey = blob.getBytes(1, blobLength);
+            blob.free();
+            String encryptionAlgo = resultSet.getString(SecretsTable.COLUMN_FILE_ENCRYPTION);
 //           PreparedStatement preparedStatement2 = connection.prepareStatement(SecretsTable.FILE_ENCRYPTION_RETRIEVE);
 //           preparedStatement2.setString(1, filePath);
 //           ResultSet resultSet2 = preparedStatement2.executeQuery();
@@ -798,24 +775,24 @@ public class ProfileScreenController implements Initializable {
 //               encryptionAlgo = resultSet2.getString(SecretsTable.COLUMN_FILE_ENCRYPTION);
 //           }
 
-           FileChooser fileChooser = new FileChooser();
-           fileChooser.setInitialFileName(file.getName());
-           File outputFile = fileChooser.showSaveDialog(null);
-           fileChooser.setTitle("Save File");
-           if(outputFile == null){
-               System.out.println("File not decrypted!");
-               return;
-           }
-           outputFile.createNewFile();
-           if(encryptionAlgo.equals("AES")){
-               decryptFileUsingAES(file,outputFile,decryptKey);
-           } else if (encryptionAlgo.equals("3DES")) {
-               decryptFileUsingTripleDES(file,outputFile,decryptKey);
-           }
-           else{
-               decryptFileUsingRSA(file,outputFile,decryptKey);
-           }
-       }
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setInitialFileName(file.getName());
+            File outputFile = fileChooser.showSaveDialog(null);
+            fileChooser.setTitle("Save File");
+            if(outputFile == null){
+                System.out.println("File not decrypted!");
+                return;
+            }
+            outputFile.createNewFile();
+            if(encryptionAlgo.equals("AES")){
+                decryptFileUsingAES(file,outputFile,decryptKey);
+            } else if (encryptionAlgo.equals("3DES")) {
+                decryptFileUsingTripleDES(file,outputFile,decryptKey);
+            }
+            else{
+                decryptFileUsingRSA(file,outputFile,decryptKey);
+            }
+        }
     }
 
     private void decryptFolder(File file, String destination) throws Exception {
@@ -880,6 +857,14 @@ public class ProfileScreenController implements Initializable {
     //    public void searchButtonClicked(ActionEvent event) {
 //        performSearch();
 //    }
+    @FXML
+    public void handleListViewClick(MouseEvent mouseEvent) {
+        // Get the selected item from the ListView
+        String selectedItem = (String) searchResultListView.getSelectionModel().getSelectedItem();
+
+        // Update the Label with the selected item
+        encryptedFileLabel.setText(selectedItem);
+    }
     @FXML
     private void performSearch() {
         String searchTerm = searchField.getText();
@@ -1122,15 +1107,15 @@ public class ProfileScreenController implements Initializable {
     }
     public void insertToSecretsTable(File browsedFile, byte[] keyBytes,String fileExtension,String folderPath, String encryptionAlgorithm) throws SQLException {
         try{
-        PreparedStatement preparedStatement = connection.prepareStatement(SecretsTable.QUERY_REGISTER);
-        preparedStatement.setString(1, browsedFile.getName());
-        InputStream fis= new ByteArrayInputStream(keyBytes);
-        preparedStatement.setBlob(2, fis);
-        preparedStatement.setString(3, fileExtension);
-        preparedStatement.setString(4, folderPath + "\\" + browsedFile.getName());
-        preparedStatement.setString(5, encryptionAlgorithm);
-        System.out.println(preparedStatement);
-        preparedStatement.executeUpdate();
+            PreparedStatement preparedStatement = connection.prepareStatement(SecretsTable.QUERY_REGISTER);
+            preparedStatement.setString(1, browsedFile.getName());
+            InputStream fis= new ByteArrayInputStream(keyBytes);
+            preparedStatement.setBlob(2, fis);
+            preparedStatement.setString(3, fileExtension);
+            preparedStatement.setString(4, folderPath + "\\" + browsedFile.getName());
+            preparedStatement.setString(5, encryptionAlgorithm);
+            System.out.println(preparedStatement);
+            preparedStatement.executeUpdate();
             System.out.println("Key saved in database!");
         }catch (SQLException e) {
             e.printStackTrace();

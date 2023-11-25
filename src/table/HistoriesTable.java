@@ -4,6 +4,7 @@ public class HistoriesTable {
     public static final String TABLE_NAME="histories";
     public static final String COLUMN_FILE_PATH="filepath";
     public static final String COLUMN_ACTION_TIME="actiontime";
+
     public static final String COLUMN_ACTION_TYPE="actiontype";
     public static final String QUERY_RETRIEVE_FROM_HISTORIES_TABLE="SELECT * FROM "+SecretsTable.TABLE_NAME+" JOIN "+
             TABLE_NAME +" ON "+ SecretsTable.TABLE_NAME+"."+COLUMN_FILE_PATH+ "="+ TABLE_NAME+ "."+ COLUMN_FILE_PATH
