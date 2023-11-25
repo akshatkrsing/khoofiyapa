@@ -96,7 +96,7 @@
                                  <children>
                                     <TextField fx:id="searchField" layoutX="26.0" layoutY="14.0" prefHeight="27.0" prefWidth="281.0" />
                                     <Button fx:id="listViewToggleButton" layoutX="307.0" layoutY="15.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="77.0" text="Toggle" />
-                                    <ListView fx:id="searchResultListView" layoutX="26.0" layoutY="40.0" onMouseClicked="#handleListViewClick" prefHeight="83.0" prefWidth="281.0" />
+                                    <ListView fx:id="searchResultListView" layoutX="26.0" layoutY="40.0" prefHeight="83.0" prefWidth="281.0" />
                                     <Button fx:id="shareDecryptedFileButton" layoutX="298.0" layoutY="224.0" mnemonicParsing="false" onAction="#toggleShareOptionAnchorPane" prefHeight="25.0" prefWidth="57.33333" text="Share">
                                        <contextMenu>
                                           <ContextMenu>
