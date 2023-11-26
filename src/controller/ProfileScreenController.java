@@ -100,7 +100,7 @@ public class ProfileScreenController implements Initializable {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-
+//        rootFolderPath = null;
         if (rootFolderPath == null) {
 
             // Documents directory as default
@@ -147,7 +147,7 @@ public class ProfileScreenController implements Initializable {
             // Show the dialog and wait for a response
             Optional<ButtonType> result = dialog.showAndWait();
             // update param in db if not updated yet
-            rootFolderPath += "\\Khoofiyapa";
+//            rootFolderPath;
             try {
                 //update param in database
                 PreparedStatement preparedStatement = connection.prepareStatement(ParamsTable.QUERY_UPDATE_PARAM_VALUE);
